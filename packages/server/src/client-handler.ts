@@ -17,7 +17,7 @@ export class ClientHandler {
   private clientSocket: WebSocket;
   private adapter: Adapter;
 
-  private conversationKeepAliveTtl = 15;
+  private conversationKeepAliveTtl = 30;
   private conversationLastSeen = 0;
 
   private internalTranscribeSocket: WebSocket | null = null;
@@ -356,7 +356,10 @@ export class ClientHandler {
       this.recentTranscriptionResults.splice(0, 1);
     }
 
-    if (this.conversationLastSeen + 30 >= unixTimestamp()) {
+    if (
+      this.conversationLastSeen + this.conversationKeepAliveTtl >=
+      unixTimestamp()
+    ) {
       this.conversationLastSeen = unixTimestamp();
 
       await this.handleTranscribedText(text);
