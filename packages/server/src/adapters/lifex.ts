@@ -2,27 +2,7 @@ import LifxClient from "lifx-lan-client";
 import { AdapterActionResult } from "~/adapter.js";
 import { getLifxConfig } from "~/config/lifx.js";
 import { InterpreterAction, InterpreterActionProperty } from "~/interpreter.js";
-import { AdapterInterface } from "./index.js";
-
-type ActionJob = {
-  type: "job";
-
-  id: string;
-  description?: string;
-  handler: (properties: any) => Promise<AdapterActionResult | null>;
-  properties: InterpreterActionProperty[];
-};
-
-type ActionCommand = {
-  type: "command";
-
-  id: string;
-  description: string;
-  handler: (properties: any) => Promise<AdapterActionResult | null>;
-  properties: InterpreterActionProperty[];
-};
-
-type Action = ActionJob | ActionCommand;
+import { Action, AdapterInterface } from "./index.js";
 
 type StandardProperties = {
   location?: string;
