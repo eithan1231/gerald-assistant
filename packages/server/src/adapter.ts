@@ -1,5 +1,4 @@
-// I interface with all adapters
-
+import { AdapterInterface } from "./adapters/index.js";
 import { AdapterLifx } from "./adapters/lifex.js";
 import { AdapterTimer } from "./adapters/timer.js";
 import { InterpreterAction } from "./interpreter.js";
@@ -57,23 +56,25 @@ type AdapterSubscription = {
 };
 
 export class Adapter {
-  private adapterTimer: AdapterTimer;
-  private adapterLifx: AdapterLifx;
+  private adapters: AdapterInterface[] = [];
 
   private schedules: AdapterActionSchedule[] = [];
 
-  private disruptLoop = false;
-
   private subscriptions: AdapterSubscription[] = [];
 
+  private disruptLoop = false;
+
   constructor() {
-    this.adapterTimer = new AdapterTimer();
-    this.adapterLifx = new AdapterLifx();
+    this.adapters.push(new AdapterTimer());
+    this.adapters.push(new AdapterLifx());
   }
 
+  public addAdapter = (adapter: AdapterInterface) => {
+    this.adapters.push(adapter);
+  };
+
   public start = async () => {
-    await this.adapterTimer.initialise();
-    await this.adapterLifx.initialise();
+    await Promise.all(this.adapters.map((adapter) => adapter.initialise()));
 
     this.disruptLoop = false;
     this.loop();
@@ -126,13 +127,14 @@ export class Adapter {
     actionId: string,
     actionProperties: any
   ): Promise<AdapterActionResult | null> => {
-    const resultTimer = await this.adapterTimer.runAction(
-      actionId,
-      actionProperties
-    );
+    for (const adapter of this.adapters) {
+      const result = await adapter.runAction(actionId, actionProperties);
 
-    if (resultTimer) {
-      for (const actionResult of resultTimer.results) {
+      if (!result) {
+        continue;
+      }
+
+      for (const actionResult of result.results) {
         if (actionResult.type === "schedule") {
           this.schedules.push({
             status: "pending",
@@ -148,17 +150,22 @@ export class Adapter {
         }
       }
 
-      return resultTimer;
+      return result;
     }
 
     return null;
   };
 
   public getActions = async (): Promise<InterpreterAction[]> => {
-    return [
-      ...(await this.adapterTimer.getInterpreterActions()),
-      ...(await this.adapterLifx.getInterpreterActions()),
-    ];
+    const result: InterpreterAction[] = [];
+
+    for (const adapter of this.adapters) {
+      const actions = await adapter.getInterpreterActions();
+
+      result.push(...actions);
+    }
+
+    return result;
   };
 
   public subscribe = (

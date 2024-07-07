@@ -2,6 +2,7 @@ import LifxClient from "lifx-lan-client";
 import { AdapterActionResult } from "~/adapter.js";
 import { getLifxConfig } from "~/config/lifx.js";
 import { InterpreterAction, InterpreterActionProperty } from "~/interpreter.js";
+import { AdapterInterface } from "./index.js";
 
 type ActionJob = {
   type: "job";
@@ -32,7 +33,7 @@ type ProfileProperties = StandardProperties & {
   brightness?: string;
 };
 
-export class AdapterLifx {
+export class AdapterLifx implements AdapterInterface {
   private actions: Action[] = [];
   private client?: LifxClient.Client;
 

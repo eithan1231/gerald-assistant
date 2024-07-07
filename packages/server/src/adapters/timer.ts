@@ -40,7 +40,7 @@ export class AdapterTimer {
 
           executeAt: unixTimestamp() + properties.duration,
 
-          actionName: "run_timer",
+          actionId: "run_timer",
           actionProperties: {},
         },
       ],

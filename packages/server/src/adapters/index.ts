@@ -1,5 +1,5 @@
 import { AdapterActionResult } from "~/adapter.js";
-import { InterpreterActionProperty } from "~/interpreter.js";
+import { InterpreterAction, InterpreterActionProperty } from "~/interpreter.js";
 
 export type ActionJob = {
   type: "job";
@@ -20,3 +20,14 @@ export type ActionCommand = {
 };
 
 export type Action = ActionJob | ActionCommand;
+
+export type AdapterInterface = {
+  initialise: () => Promise<void>;
+
+  runAction: (
+    id: string,
+    properties: any
+  ) => Promise<AdapterActionResult | null>;
+
+  getInterpreterActions: () => Promise<InterpreterAction[]>;
+};

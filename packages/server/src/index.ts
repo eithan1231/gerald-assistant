@@ -2,27 +2,15 @@ import { createServer } from "node:http";
 import { WebSocketServer } from "ws";
 import { ClientHandler } from "./client-handler.js";
 import { Adapter } from "./adapter.js";
+import { AdapterLifx } from "./adapters/lifex.js";
+import { AdapterTimer } from "./adapters/timer.js";
 
 const main = async () => {
-  // interpreter.addAction({
-  //   id: "set_timer",
-  //   description: "Sets a timer for a specified amount of time",
-  //   properties: [
-  //     {
-  //       name: "duration",
-  //       description: "Duration of timer in seconds",
-  //       type: "number",
-  //       required: true,
-  //     },
-  //     {
-  //       name: "name",
-  //       description: "The presentable name of the timer",
-  //       type: "string",
-  //     },
-  //   ],
-  // });
-
   const adapter = new Adapter();
+
+  adapter.addAdapter(new AdapterLifx());
+  adapter.addAdapter(new AdapterTimer());
+
   await adapter.start();
 
   const server = createServer();
