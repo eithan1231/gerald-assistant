@@ -7,7 +7,7 @@ import {
   getConfigOption,
   getConfigOptionList,
 } from "./config/env.js";
-import { Adapter } from "./adapter.js";
+import { Adapter, AdapterActionResult } from "./adapter.js";
 
 type ClientIdentification = {
   name: string;
@@ -140,8 +140,10 @@ export class ClientHandler {
   // Client Message Delivery
   // =============================================
 
-  public sendJson = async (payload: any) => {
-    //
+  public sendJson = async (data: any) => {
+    const payload = Buffer.concat([Buffer.from("J"), data]);
+
+    this.clientSocket.send(payload);
   };
 
   public sendAudio = async (data: Buffer) => {
@@ -150,9 +152,51 @@ export class ClientHandler {
     this.clientSocket.send(payload);
   };
 
+  public sendTts = async (text: string) => {
+    const responseTts = await createTextToSpeech(text);
+
+    if (!responseTts.success) {
+      console.log(
+        `[sendTts] Failed to created speech from text with message, ${responseTts.message}`
+      );
+
+      return;
+    }
+
+    await this.sendAudio(Buffer.concat(responseTts.data));
+  };
+
   // =============================================
   // Procedure Handlers
   // =============================================
+
+  private handleJsonIdentify = async (payload: {
+    type: "identify";
+    [name: string]: any;
+  }) => {
+    if (!payload.name) {
+      console.log(
+        `[handleClientSocketDataJson] Received malformed payload, no name with identify payload`
+      );
+      return;
+    }
+
+    console.log(`[handleClientSocketDataJson] Identified ${payload.name}`);
+
+    this.identification = {
+      name: payload.name,
+    };
+
+    this.adapter.subscribe(this.identification.name, (result) =>
+      this.onAdapterEvent(result)
+    );
+
+    await this.sendJson({
+      type: "identified",
+    });
+
+    return;
+  };
 
   private handleClientSocketDataJson = async (buffer: Buffer) => {
     const payload = JSON.parse(buffer.toString());
@@ -166,24 +210,7 @@ export class ClientHandler {
     }
 
     if (payload.type === "identify") {
-      if (!payload.name) {
-        console.log(
-          `[handleClientSocketDataJson] Received malformed payload, no name with identify payload`
-        );
-        return;
-      }
-
-      console.log(`[handleClientSocketDataJson] Identified ${payload.name}`);
-
-      this.identification = {
-        name: payload.name,
-      };
-
-      await this.sendJson({
-        type: "identified",
-      });
-
-      return;
+      return await this.handleJsonIdentify(payload);
     }
 
     if (!this.identification) {
@@ -224,16 +251,7 @@ export class ClientHandler {
     if (responseInterpreter.type === "text") {
       console.log("<", responseInterpreter.text);
 
-      const responseTts = await createTextToSpeech(responseInterpreter.text);
-
-      if (!responseTts.success) {
-        console.log(
-          `[handleTranscribedText] Failed to created speech from text with message, ${responseTts.message}`
-        );
-        return;
-      }
-
-      await this.sendAudio(Buffer.concat(responseTts.data));
+      await this.sendTts(responseInterpreter.text);
     }
 
     if (responseInterpreter.type === "action") {
@@ -246,7 +264,7 @@ export class ClientHandler {
 
         if (!response || !response.success) {
           console.log(
-            `[handleTranscribedText] Adapter action failed, ${action.id}, ${action.parameters}`
+            `[handleTranscribedText] Adapter action failed, ${response?.success}`
           );
 
           continue;
@@ -255,10 +273,15 @@ export class ClientHandler {
         for (const result of response.results) {
           if (result.type === "interpreter-message") {
             interpreter.addToolMessage(action.toolId, result.message);
-            continue;
           }
 
-          // TODO: handle other results. TTS, Audio, etc.
+          if (result.type === "tts") {
+            await this.sendTts(result.message);
+          }
+
+          if (result.type === "sound") {
+            await this.sendAudio(result.data);
+          }
         }
       }
     }
@@ -339,6 +362,24 @@ export class ClientHandler {
 
   private onTranscribeSocketError = async (err: Error) => {
     console.error(err);
+  };
+
+  private onAdapterEvent = async (result: AdapterActionResult) => {
+    for (const item of result.results) {
+      if (item.type === "interpreter-message") {
+        const interpreter = await this.getInterpreter();
+
+        interpreter.addMessage(item.message);
+      }
+
+      if (item.type === "tts") {
+        await this.sendTts(item.message);
+      }
+
+      if (item.type === "sound") {
+        await this.sendAudio(item.data);
+      }
+    }
   };
 
   private onInterval = async () => {

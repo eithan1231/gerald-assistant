@@ -26,7 +26,7 @@ export type AdapterActionResultTTS = {
 
 export type AdapterActionResultSound = {
   type: "sound";
-  file: string;
+  data: Buffer;
 };
 
 export type AdapterActionResult = {
@@ -51,6 +51,11 @@ type AdapterActionSchedule = {
   actionProperties: any;
 };
 
+type AdapterSubscription = {
+  clientName: string;
+  callback: (result: AdapterActionResult) => Promise<void>;
+};
+
 export class Adapter {
   private adapterTimer: AdapterTimer;
   private adapterLifx: AdapterLifx;
@@ -58,6 +63,8 @@ export class Adapter {
   private schedules: AdapterActionSchedule[] = [];
 
   private disruptLoop = false;
+
+  private subscriptions: AdapterSubscription[] = [];
 
   constructor() {
     this.adapterTimer = new AdapterTimer();
@@ -99,7 +106,9 @@ export class Adapter {
           schedule.actionProperties
         );
 
-        // TODO: Somehow publish results to the client handler class????
+        if (result) {
+          this.publish(schedule.clientName, result);
+        }
 
         schedule.status = "finished";
       }
@@ -150,5 +159,45 @@ export class Adapter {
       ...(await this.adapterTimer.getInterpreterActions()),
       ...(await this.adapterLifx.getInterpreterActions()),
     ];
+  };
+
+  public subscribe = (
+    clientName: string,
+    callback: AdapterSubscription["callback"]
+  ) => {
+    if (
+      this.subscriptions.find(
+        (subscription) => subscription.clientName === clientName
+      )
+    ) {
+      throw new Error(`clientName already subscribed, ${clientName}`);
+    }
+
+    this.subscriptions.push({
+      clientName: clientName,
+      callback: callback,
+    });
+  };
+
+  public unsubscribe = (clientName: string) => {
+    const index = this.subscriptions.findIndex(
+      (subscription) => subscription.clientName === clientName
+    );
+
+    if (index >= 0) {
+      this.subscriptions.splice(index, 1);
+    }
+  };
+
+  private publish = async (clientName: string, result: AdapterActionResult) => {
+    const subscription = this.subscriptions.find(
+      (sub) => sub.clientName === clientName
+    );
+
+    if (!subscription) {
+      return;
+    }
+
+    await subscription.callback(result);
   };
 }
