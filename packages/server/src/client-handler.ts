@@ -25,7 +25,7 @@ export class ClientHandler {
 
   private identification?: ClientIdentification;
 
-  private interval: NodeJS.Timeout;
+  private interval: NodeJS.Timeout | null = null;
 
   private recentTranscriptionResults: Array<{ time: number; value: string }> =
     [];
@@ -41,8 +41,8 @@ export class ClientHandler {
       }
     });
 
-    this.interval = setInterval(() => this.onInterval(), 5000);
-    this.clientSocket.once("close", () => clearInterval(this.interval));
+    this.clientSocket.once("open", () => this.onClientSocketOpen());
+    this.clientSocket.once("close", () => this.onClientSocketClose());
   }
 
   private getTranscribeSocket = async () => {
@@ -314,6 +314,20 @@ export class ClientHandler {
 
   private onClientSocketError = async (err: Error) => {
     console.error(err);
+  };
+
+  private onClientSocketOpen = () => {
+    this.interval = setInterval(() => this.onInterval(), 5000);
+  };
+
+  private onClientSocketClose = () => {
+    if (this.interval) {
+      clearInterval(this.interval);
+    }
+
+    if (this.identification) {
+      this.adapter.unsubscribe(this.identification.name);
+    }
   };
 
   private onTranscribeSocketData = async (data: Buffer) => {

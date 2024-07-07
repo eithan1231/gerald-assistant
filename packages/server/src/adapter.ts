@@ -117,7 +117,7 @@ export class Adapter {
         (schedule) => schedule.status !== "finished"
       );
 
-      timeout(1000);
+      await timeout(1000);
     }
   };
 
