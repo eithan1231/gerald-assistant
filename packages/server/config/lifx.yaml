@@ -1,0 +1,25 @@
+lights:
+  - name: "office_lamp"
+    deviceLabel: "office_lamp"
+
+  - name: "living_room_strip_1"
+    deviceLabel: "living_room_strip_1"
+
+  - name: "bedroom_strip_1"
+    deviceLabel: "bedroom_strip_1"
+
+commands:
+  - name: all
+    lights:
+      - "office_lamp"
+      - "living_room_strip_1"
+      - "bedroom_strip_1"
+
+  - name: office
+    lights: ["office_lamp"]
+
+  - name: bedroom
+    lights: ["bedroom_strip_1"]
+
+  - name: lounge
+    lights: ["living_room_strip_1"]

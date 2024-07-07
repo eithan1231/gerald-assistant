@@ -1,0 +1,25 @@
+version: "3.8"
+
+services:
+  faster_whisper_server:
+    # docker run --gpus=all -p 8000:8000 fedirz/faster-whisper-server:latest-cuda
+    # docker run -p 8000:8000 --env WHISPER_MODEL=Systran/faster-whisper-tiny.en fedirz/faster-whisper-server:latest-cpu
+    container_name: faster-whisper-server
+    image: fedirz/faster-whisper-server:latest-cpu
+    restart: always
+    volumes:
+      - ./cache/faster-whisper/huggingface:/root/.cache/huggingface
+    environment:
+      # - WHISPER_MODEL=Systran/faster-distil-whisper-small.en
+      # - WHISPER_MODEL=Systran/faster-whisper-tiny.en
+      - WHISPER_MODEL=Systran/faster-whisper-base.en
+    ports:
+      - 3500:8000
+  mimic3:
+    container_name: mimic3
+    image: mycroftai/mimic3
+    restart: always
+    volumes:
+      - ./cache/mimic3:/home/mimic3/.local/share/mycroft/mimic3
+    ports:
+      - 3501:59125
