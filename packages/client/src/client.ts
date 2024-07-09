@@ -1,6 +1,7 @@
 import { WebSocket } from "ws";
 import { timeout } from "./util.js";
 import { Speaker } from "./speaker.js";
+import { MicrophoneDirect } from "./microphone-direct.js";
 import { Microphone } from "./microphone.js";
 
 const CONFIG_ENDPOINT = process.env.ENDPOINT ?? "ws://localhost:3000/";
@@ -25,7 +26,7 @@ export class Client {
     this.options = options;
 
     this.speaker = new Speaker();
-    this.microphone = new Microphone();
+    this.microphone = new MicrophoneDirect();
     this.microphone.onData = this.onMicrophoneData;
 
     this.speaker.onAudioPlay = () => this.microphone.pause();
@@ -56,11 +57,15 @@ export class Client {
       return false;
     };
 
-    if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+    if (this.socket && this.socket.readyState === WebSocket.CONNECTING) {
       const sock = await waitOpen();
       if (sock) {
         return this.socket;
       }
+    }
+
+    if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+      return this.socket;
     }
 
     this.socket = new WebSocket(CONFIG_ENDPOINT);
@@ -90,8 +95,18 @@ export class Client {
     return null;
   };
 
-  public sendSocketJson = async (payload: any) => {
-    //
+  public sendSocketJson = async (data: any) => {
+    const socket = await this.getSocket();
+    if (!socket) {
+      throw new Error("Unable to send data on null socket");
+    }
+
+    const payload = Buffer.concat([
+      Buffer.from("J"),
+      Buffer.from(JSON.stringify(data)),
+    ]);
+
+    await socket.send(payload);
   };
 
   public sendSocketAudio = async (audioBuffer: Buffer) => {
@@ -120,6 +135,7 @@ export class Client {
 
   private handleSocketDataJson = async (buffer: Buffer) => {
     const payload = JSON.parse(buffer.toString());
+    console.log(payload);
 
     if (!payload.type) {
       console.log(`[handleSocketDataJson] Received malformed payload, no type`);

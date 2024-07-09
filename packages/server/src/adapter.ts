@@ -86,16 +86,14 @@ export class Adapter {
 
   private loop = async () => {
     while (!this.disruptLoop) {
-      for (const schedule of this.schedules) {
-        if (schedule.executeAt <= unixTimestamp()) {
-          continue;
-        }
+      const schedules = this.schedules;
 
+      for (const schedule of schedules) {
         if (schedule.status !== "pending") {
           continue;
         }
 
-        if (schedule.executeAt < unixTimestamp()) {
+        if (schedule.executeAt > unixTimestamp()) {
           continue;
         }
 
@@ -114,7 +112,7 @@ export class Adapter {
         schedule.status = "finished";
       }
 
-      this.schedules = this.schedules.filter(
+      this.schedules = schedules.filter(
         (schedule) => schedule.status !== "finished"
       );
 
@@ -127,6 +125,12 @@ export class Adapter {
     actionId: string,
     actionProperties: any
   ): Promise<AdapterActionResult | null> => {
+    console.log(
+      `[Adapter/runAction] clientName ${clientName}, actionId ${actionId}, actionProperties ${JSON.stringify(
+        actionProperties
+      )}`
+    );
+
     for (const adapter of this.adapters) {
       const result = await adapter.runAction(actionId, actionProperties);
 

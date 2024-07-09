@@ -2,6 +2,7 @@ import { AdapterActionResult } from "~/adapter.js";
 import { InterpreterAction } from "~/interpreter.js";
 import { unixTimestamp } from "~/util.js";
 import { Action } from "./index.js";
+import { readFile } from "node:fs/promises";
 
 export class AdapterTimer {
   private actions: Action[] = [];
@@ -32,9 +33,14 @@ export class AdapterTimer {
   public handlerSetTimer = async (properties: {
     duration: number;
   }): Promise<AdapterActionResult> => {
+    console.log("setting timer in ", properties.duration);
     return {
       success: true,
       results: [
+        {
+          type: "interpreter-message",
+          message: "Timer set",
+        },
         {
           type: "schedule",
 
@@ -50,13 +56,14 @@ export class AdapterTimer {
   public handlerRunTimer = async (
     properties: any
   ): Promise<AdapterActionResult> => {
+    const content = await readFile("./config/audio/ding-dong.wav");
+
     return {
       success: true,
       results: [
         {
-          // TODO: Migrate to sound (chime)
-          type: "tts",
-          message: "Hey, just notifying you of your alarm.",
+          type: "sound",
+          data: content,
         },
       ],
     };

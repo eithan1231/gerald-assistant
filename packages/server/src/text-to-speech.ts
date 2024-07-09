@@ -21,7 +21,7 @@ export const createTextToSpeech = async (
 
   const params = new URLSearchParams();
   params.set("text", phrase);
-  params.set("voice", "en_US/vctk_low#p284"); //en_US/vctk_low#p284 | en_US/vctk_low#p239
+  params.set("voice", "en_US/vctk_low#p284"); //en_US/vctk_low#p284 | en_US/vctk_low#p239  | en_US/vctk_low#p260
   params.set("noiseScale", "0.333");
   params.set("noiseW", "0.333");
   params.set("lengthScale", "1.1");

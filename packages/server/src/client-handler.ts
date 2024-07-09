@@ -141,7 +141,10 @@ export class ClientHandler {
   // =============================================
 
   public sendJson = async (data: any) => {
-    const payload = Buffer.concat([Buffer.from("J"), data]);
+    const payload = Buffer.concat([
+      Buffer.from("J"),
+      Buffer.from(JSON.stringify(data)),
+    ]);
 
     this.clientSocket.send(payload);
   };
@@ -272,7 +275,7 @@ export class ClientHandler {
 
         for (const result of response.results) {
           if (result.type === "interpreter-message") {
-            interpreter.addToolMessage(action.toolId, result.message);
+            await interpreter.addToolMessage(action.toolId, result.message);
           }
 
           if (result.type === "tts") {
