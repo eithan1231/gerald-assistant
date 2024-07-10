@@ -3,11 +3,13 @@ import { timeout } from "./util.js";
 import { Speaker } from "./speaker.js";
 import { MicrophoneDirect } from "./microphone-direct.js";
 import { Microphone } from "./microphone.js";
+import { MicrophoneFilter } from "./microphone-filter.js";
 
 const CONFIG_ENDPOINT = process.env.ENDPOINT ?? "ws://localhost:3000/";
 
 export type ClientOptions = {
   name: string;
+  microphone: "filtered" | "direct";
 };
 
 export class Client {
@@ -26,7 +28,15 @@ export class Client {
     this.options = options;
 
     this.speaker = new Speaker();
-    this.microphone = new MicrophoneDirect();
+
+    if (this.options.microphone === "direct") {
+      this.microphone = new MicrophoneDirect();
+    } else if (this.options.microphone === "filtered") {
+      this.microphone = new MicrophoneFilter();
+    } else {
+      throw new Error("Expected options microphone to be set");
+    }
+
     this.microphone.onData = this.onMicrophoneData;
 
     this.speaker.onAudioPlay = () => this.microphone.pause();

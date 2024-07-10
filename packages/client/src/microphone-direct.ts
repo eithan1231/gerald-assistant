@@ -10,7 +10,9 @@ export class MicrophoneDirect implements Microphone {
   private audioBufferTotalLength = 0;
   private audioBuffer: Buffer[] = [];
 
-  public onData?: (audioBuffer: Buffer) => void;
+  public onData: (audioBuffer: Buffer) => void = () => {
+    throw new Error("Not implemented error");
+  };
 
   constructor() {
     this.microphone = new nodeMic({
@@ -18,6 +20,7 @@ export class MicrophoneDirect implements Microphone {
       channels: 1,
       fileType: "raw",
       rate: 16000,
+      encoding: "signed-integer",
       bitwidth: 16,
       threshold: 3,
     });
