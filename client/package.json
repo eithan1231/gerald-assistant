@@ -13,7 +13,6 @@
   "author": "Eithan Hersey-Tuit",
   "license": "ISC",
   "dependencies": {
-    "node-mic": "^1.0.1",
     "speaker": "^0.5.5",
     "typescript": "^5.4.5",
     "ws": "^8.18.0",
