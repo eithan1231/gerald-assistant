@@ -20,13 +20,15 @@ export class Microphone {
     this.paused = false;
 
     const alsaInterface = process.env.FFMPEG_ALSA_INTERFACE ?? "hw:0,0";
+    const alsaChannels = process.env.FFMPEG_ALSA_CHANNELS ?? "2";
+
     const filterEnabled =
       !process.env.FFMPEG_FILTER || process.env.FFMPEG_FILTER === "true";
 
     const args: string[] = [];
 
     // Microphone input using Alsa, on card 0, device 0
-    args.push(`-f alsa -i ${alsaInterface}`);
+    args.push(`-f alsa -channels ${alsaChannels} -i ${alsaInterface}`);
 
     // Audio-Channel 1 (ensure mono audio)
     args.push("-ac 1");

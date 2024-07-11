@@ -13,10 +13,11 @@ services:
       # Name of client. (e.g. kitchen, lounge, bedroom, bathroom, gerald, assistant)
       - CLIENT_NAME=Gerald Assistant
 
-      # Filtered microphone should run on most hardware, and is the ideal solution.
-      # If you are running on super-low spec hardware (such as single core, 2ghz processor),
-      # I recommend keeping this off. Otherwise it should be fine.
-      - FILTERED_MICROPHONE=true
+      # FFMPEG Alsa Channels. The amount of input channels by the input device, default is 2, but
+      # your sound device may only support 1.
+      #
+      # https://trac.ffmpeg.org/wiki/Capture/ALSA
+      - FFMPEG_ALSA_CHANNELS=2
 
       # FFMPEG Alsa Interface, this determines the microphone input hardware device. The default is
       # "hw:0,0". This is the `-i` flag as described in the following page:
