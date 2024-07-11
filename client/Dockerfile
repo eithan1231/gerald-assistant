@@ -2,6 +2,7 @@ FROM node:20-slim AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
+RUN  apt-get -y update && apt-get -y upgrade && apt-get install -y --no-install-recommends ffmpeg alsa-tools
 COPY . /app
 WORKDIR /app
 
@@ -18,5 +19,4 @@ RUN pnpm run build
 FROM base
 COPY --from=prod-deps /app/node_modules /app/node_modules
 COPY --from=build /app/dist /app/dist
-EXPOSE 3000
 CMD [ "pnpm", "start" ]
