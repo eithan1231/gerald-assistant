@@ -19,27 +19,35 @@ export class Microphone {
   public start() {
     this.paused = false;
 
-    const modelFilename = path.join(
-      process.cwd(),
-      "./config/rnnoise-models/somnolent-hogwash/sh.rnnn"
-    );
+    const alsaInterface = process.env.FFMPEG_ALSA_INTERFACE ?? "hw:0,0";
+    const filterEnabled =
+      !process.env.FFMPEG_FILTER || process.env.FFMPEG_FILTER === "true";
 
-    const args = [
-      // Microphone input using Alsa, on card 1, device 0
-      "-f alsa -i hw:1,0",
+    const args: string[] = [];
 
-      // Audio-Channel 1 (ensure mono audio)
-      "-ac 1",
+    // Microphone input using Alsa, on card 0, device 0
+    args.push(`-f alsa -i ${alsaInterface}`);
 
-      // Background sound filtering
-      `-af \"arnndn=m='${modelFilename}'\"`,
+    // Audio-Channel 1 (ensure mono audio)
+    args.push("-ac 1");
 
-      // Set sample rate to 16000
-      `-ar 16000`,
+    // Background sound filtering
+    if (filterEnabled) {
+      console.log("[Microphone/start] Filtering enabled");
 
-      // Stream to stdout, using encoding "s16le" -> "PCM signed 16-bit little-endian"
-      "-f s16le -",
-    ];
+      const modelFilename = path.join(
+        process.cwd(),
+        "./config/rnnoise-models/somnolent-hogwash/sh.rnnn"
+      );
+
+      args.push(`-af \"arnndn=m='${modelFilename}'\"`);
+    }
+
+    // Set sample rate to 16000
+    args.push(`-ar 16000`);
+
+    // Stream to stdout, using encoding "s16le" -> "PCM signed 16-bit little-endian"
+    args.push("-f s16le -");
 
     this.ffmpeg = spawn("ffmpeg", args, { shell: true });
 

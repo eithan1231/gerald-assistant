@@ -1,0 +1,35 @@
+version: "3.8"
+
+services:
+  client:
+    container_name: ga-client
+    image: eithan1231/gerald-assistant-client
+    restart: unless-stopped
+    privileged: true
+    environment:
+      # Websocket endpoint
+      - ENDPOINT=ws://host.docker.internal:3000/
+
+      # Name of client. (e.g. kitchen, lounge, bedroom, bathroom, gerald, assistant)
+      - CLIENT_NAME=Gerald Assistant
+
+      # Filtered microphone should run on most hardware, and is the ideal solution.
+      # If you are running on super-low spec hardware (such as single core, 2ghz processor),
+      # I recommend keeping this off. Otherwise it should be fine.
+      - FILTERED_MICROPHONE=true
+
+      # FFMPEG Alsa Interface, this determines the microphone input hardware device. The default is
+      # "hw:0,0". This is the `-i` flag as described in the following page:
+      #
+      # https://trac.ffmpeg.org/wiki/Capture/ALSA
+      - FFMPEG_ALSA_INTERFACE=hw:0,0
+
+      # FFMPEG Filter which utilises the "arnndn" filtering method, on publicly trained models.
+      # This is a recommended option if your hardware can run it, most computers will run it
+      # without issue, even some raspberry pi's.
+      #
+      # This option will attempt to filter out background sound such as static, fans, chairs moving,
+      # doors opening and closing, etc.
+      - FFMPEG_FILTER=true
+    volumes:
+      - /dev/snd:/dev/snd
