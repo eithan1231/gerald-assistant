@@ -198,7 +198,9 @@ export class ClientHandler {
       type: "identified",
     });
 
-    return;
+    await timeout(50);
+
+    await this.sendTts(`Identified by ${this.identification.name}`);
   };
 
   private handleClientSocketDataJson = async (buffer: Buffer) => {

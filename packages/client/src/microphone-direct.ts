@@ -70,7 +70,7 @@ export class MicrophoneDirect implements Microphone {
 
     if (this.audioBufferTotalLength > 16000 * 15) {
       console.log(
-        "[Microphone/onMicrophoneData ]forcing flushAudioBuffer due to packet size"
+        "[Microphone/onMicrophoneData] forcing flushAudioBuffer due to packet size"
       );
 
       this.flushAudioBuffer();

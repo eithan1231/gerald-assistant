@@ -33,7 +33,10 @@ export class AdapterTimer {
   public handlerSetTimer = async (properties: {
     duration: number;
   }): Promise<AdapterActionResult> => {
-    console.log("setting timer in ", properties.duration);
+    console.log(
+      `[AdapterTimer/handlerSetTimer] Setting timer for in ${properties.duration} seconds`
+    );
+
     return {
       success: true,
       results: [

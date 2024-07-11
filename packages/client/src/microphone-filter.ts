@@ -1,5 +1,4 @@
 import { ChildProcess, spawn } from "node:child_process";
-
 import { Microphone } from "./microphone.js";
 import path from "node:path";
 
@@ -52,24 +51,36 @@ export class MicrophoneFilter implements Microphone {
     this.ffmpeg.stderr?.on("data", (chunk: Buffer) => this.onFfmpegLog(chunk));
   }
 
+  public stop() {
+    this.ffmpeg?.kill("SIGTERM");
+    this.audioBufferClear();
+  }
+
   public pause() {
     this.paused = true;
   }
 
   public resume() {
     this.paused = false;
-    this.audioBuffer = [];
-    this.audioBufferTotalLength = 0;
+    this.audioBufferClear();
   }
 
-  public stop() {
-    this.ffmpeg?.kill("SIGTERM");
-  }
+  private audioBufferFlush = () => {
+    this.onData(Buffer.concat(this.audioBuffer));
+    this.audioBufferClear();
+  };
+
+  private audioBufferClear = () => {
+    this.audioBuffer = [];
+    this.audioBufferTotalLength = 0;
+  };
 
   private onFfmpegAudio = (chunk: Buffer) => {
     if (this.paused) {
       return;
     }
+
+    const flushAt = 256;
 
     this.audioBufferLastDetectionIncrement++;
 
@@ -86,19 +97,23 @@ export class MicrophoneFilter implements Microphone {
       this.audioBufferLastDetectionIncrement = 0;
     }
 
-    const flushAt = 256;
-
     if (this.audioBufferLastDetectionIncrement <= flushAt) {
       this.audioBufferTotalLength += chunk.length;
       this.audioBuffer.push(chunk);
     }
 
+    if (this.audioBufferTotalLength > 16000 * 15) {
+      console.log(
+        "[MicrophoneFilter/onFfmpegAudio ] Flushing ffmpeg audio due to buffer size"
+      );
+
+      return this.audioBufferFlush();
+    }
+
     if (this.audioBufferLastDetectionIncrement === flushAt) {
       console.log(`[MicrophoneFilter/onFfmpegAudio] Flushing ffmpeg audio`);
 
-      this.onData(Buffer.concat(this.audioBuffer));
-      this.audioBuffer = [];
-      this.audioBufferTotalLength = 0;
+      return this.audioBufferFlush();
     }
   };
 
