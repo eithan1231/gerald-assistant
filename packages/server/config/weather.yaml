@@ -1,0 +1,37 @@
+defaultLocation: 'default'
+
+locations:
+  - name: default
+    connector:
+      type: prometheus
+      series:
+        identifier: 'living-room'
+      gauge: "iot_air_temperature"
+
+  - name: bathroom
+    connector:
+      type: prometheus
+      series:
+        identifier: 'bathroom'
+      gauge: "iot_air_temperature"
+
+  - name: bedroom
+    connector:
+      type: prometheus
+      series:
+        identifier: 'bedroom'
+      gauge: "iot_air_temperature"
+
+  - name: lounge
+    connector:
+      type: prometheus
+      series:
+        identifier: 'living-room'
+      gauge: "iot_air_temperature"
+
+  - name: homelab
+    connector:
+      type: prometheus
+      series:
+        identifier: 'homelab'
+      gauge: "iot_air_temperature"

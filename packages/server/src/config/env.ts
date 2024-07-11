@@ -1,4 +1,5 @@
 export enum ConfigurationOptions {
+  EndpointPrometheus = "ENDPOINT_PROMETHEUS",
   EndpointTts = "ENDPOINT_TTS",
   EndpointTranscribe = "ENDPOINT_TRANSCRIBE",
   ListenWords = "LISTEN_WORDS",

@@ -2,7 +2,7 @@ import { readFile } from "fs/promises";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 
-const LifxConfigSchema = z.object({
+const ConfigSchema = z.object({
   lights: z.array(
     z.object({
       name: z.string(),
@@ -18,7 +18,7 @@ const LifxConfigSchema = z.object({
   ),
 });
 
-let cachedConfig: z.infer<typeof LifxConfigSchema>;
+let cachedConfig: z.infer<typeof ConfigSchema>;
 
 export const getLifxConfig = async () => {
   if (cachedConfig) {
@@ -29,7 +29,7 @@ export const getLifxConfig = async () => {
 
   const contentParsed = parseYaml(contentRaw);
 
-  const contentValidated = await LifxConfigSchema.parseAsync(contentParsed);
+  const contentValidated = await ConfigSchema.parseAsync(contentParsed);
 
   for (const command of contentValidated.commands) {
     for (const commandLight of command.lights) {

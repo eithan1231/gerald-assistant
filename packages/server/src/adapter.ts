@@ -54,7 +54,7 @@ export type AdapterActionResultItem =
   | AdapterActionResultItemSound;
 
 export type AdapterActionResult = {
-  success: true;
+  success: boolean;
   results: Array<AdapterActionResultItem>;
 };
 
@@ -138,7 +138,7 @@ export class Adapter {
     clientName: string,
     actions: Array<AdapterInterfaceRunActionData>
   ) => {
-    console.log(`[Adapter/runAction] clientName ${clientName}`);
+    console.log(`[Adapter/runActions] clientName ${clientName}`);
 
     let results: AdapterActionResultItem[] = [];
 
@@ -149,6 +149,10 @@ export class Adapter {
         if (!res || !res.success) {
           continue;
         }
+
+        console.log(
+          `[Adapter/runActions] Action run with results, clientName ${clientName}, action.id ${action.id}, action.parameters ${action.parameters}`
+        );
 
         results.push(...res.results);
       }
