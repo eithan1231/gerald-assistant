@@ -5,9 +5,9 @@ settings:
   excludeLinksFromLockfile: false
 
 dependencies:
-  speaker:
-    specifier: ^0.5.5
-    version: 0.5.5
+  speaker-arm64:
+    specifier: ^0.5.2
+    version: 0.5.2
   typescript:
     specifier: ^5.4.5
     version: 5.5.3
@@ -500,8 +500,8 @@ packages:
     engines: {node: '>=8'}
     dev: true
 
-  /speaker@0.5.5:
-    resolution: {integrity: sha512-IBeMZUITigYBO139h0+1MAgBHNZF55GFJN4U/Box35Sg49cfqYkbCO92TXoCUy22Ast08zfqKuXLvPxq9CWwLw==}
+  /speaker-arm64@0.5.2:
+    resolution: {integrity: sha512-+lJPSfmBVilmZNL1B5LAnZMlp0soV65a2Pjk5/w+QGq14Mnz9SFUlpXW1OOzwbDluGo/iu1OeR8tE9nzXHbcLw==}
     engines: {node: '>=8.6'}
     requiresBuild: true
     dependencies:

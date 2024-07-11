@@ -1,4 +1,4 @@
-import SpeakerLib from "speaker";
+import SpeakerLib from "speaker-arm64";
 import { timeout } from "./util.js";
 
 export class Speaker {
