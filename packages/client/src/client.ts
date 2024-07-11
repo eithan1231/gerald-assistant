@@ -46,6 +46,7 @@ export class Client {
   public start = async () => {
     this.microphone.start();
     this.speaker.start();
+    await this.getSocket();
   };
 
   public stop = async () => {

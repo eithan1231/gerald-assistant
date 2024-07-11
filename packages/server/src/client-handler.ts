@@ -7,7 +7,7 @@ import {
   getConfigOption,
   getConfigOptionList,
 } from "./config/env.js";
-import { Adapter, AdapterActionResult } from "./adapter.js";
+import { Adapter, AdapterActionResultItem } from "./adapter.js";
 
 type ClientIdentification = {
   name: string;
@@ -190,8 +190,9 @@ export class ClientHandler {
       name: payload.name,
     };
 
-    this.adapter.subscribe(this.identification.name, (result) =>
-      this.onAdapterEvent(result)
+    this.adapter.subscribe(
+      this.identification.name,
+      (result: AdapterActionResultItem) => this.onAdapterEvent(result)
     );
 
     await this.sendJson({
@@ -249,7 +250,7 @@ export class ClientHandler {
 
     const interpreter = await this.getInterpreter();
 
-    interpreter.addMessage(text);
+    await interpreter.addUserMessage(text);
 
     const responseInterpreter = await interpreter.process();
 
@@ -260,35 +261,16 @@ export class ClientHandler {
     }
 
     if (responseInterpreter.type === "action") {
-      for (const action of responseInterpreter.actions) {
-        const response = await this.adapter.runAction(
-          this.identification.name,
-          action.id,
-          action.parameters
-        );
-
-        if (!response || !response.success) {
-          console.log(
-            `[handleTranscribedText] Adapter action failed, ${response?.success}`
-          );
-
-          continue;
-        }
-
-        for (const result of response.results) {
-          if (result.type === "interpreter-message") {
-            await interpreter.addToolMessage(action.toolId, result.message);
-          }
-
-          if (result.type === "tts") {
-            await this.sendTts(result.message);
-          }
-
-          if (result.type === "sound") {
-            await this.sendAudio(result.data);
-          }
-        }
-      }
+      await this.adapter.runActions(
+        this.identification.name,
+        responseInterpreter.actions.map((action) => {
+          return {
+            id: action.id,
+            parameters: action.parameters,
+            toolId: action.toolId,
+          };
+        })
+      );
     }
   };
 
@@ -386,20 +368,52 @@ export class ClientHandler {
     console.error(err);
   };
 
-  private onAdapterEvent = async (result: AdapterActionResult) => {
-    for (const item of result.results) {
-      if (item.type === "interpreter-message") {
-        const interpreter = await this.getInterpreter();
+  private onAdapterEvent = async (result: AdapterActionResultItem) => {
+    if (!this.identification) {
+      return;
+    }
 
-        interpreter.addMessage(item.message);
+    const interpreter = await this.getInterpreter();
+
+    if (result.type === "interpreter-assistant-message") {
+      await interpreter.addAssistantMessage(result.message);
+    }
+
+    if (result.type === "interpreter-user-message") {
+      await interpreter.addUserMessage(result.message);
+    }
+
+    if (result.type === "interpreter-tool-message") {
+      await interpreter.addToolMessage(result.toolId, result.message);
+    }
+
+    if (result.type === "client-tts") {
+      await this.sendTts(result.message);
+    }
+
+    if (result.type === "client-sound") {
+      await this.sendAudio(result.data);
+    }
+
+    if (result.type === "interpreter-evaluate") {
+      const responseInterpreter = await interpreter.process();
+
+      if (responseInterpreter.type === "text") {
+        console.log("<", responseInterpreter.text);
+
+        await this.sendTts(responseInterpreter.text);
       }
 
-      if (item.type === "tts") {
-        await this.sendTts(item.message);
-      }
-
-      if (item.type === "sound") {
-        await this.sendAudio(item.data);
+      if (responseInterpreter.type === "action") {
+        for (const action of responseInterpreter.actions) {
+          await this.adapter.runActions(this.identification.name, [
+            {
+              id: action.id,
+              parameters: action.parameters,
+              toolId: action.toolId,
+            },
+          ]);
+        }
       }
     }
   };

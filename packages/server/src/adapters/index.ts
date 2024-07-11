@@ -6,8 +6,10 @@ export type ActionJob = {
 
   id: string;
   description?: string;
-  handler: (properties: any) => Promise<AdapterActionResult | null>;
-  properties: InterpreterActionProperty[];
+  handler: (
+    payload: AdapterInterfaceRunActionData
+  ) => Promise<AdapterActionResult | null>;
+  parameters: InterpreterActionProperty[];
 };
 
 export type ActionCommand = {
@@ -15,18 +17,25 @@ export type ActionCommand = {
 
   id: string;
   description: string;
-  handler: (properties: any) => Promise<AdapterActionResult | null>;
-  properties: InterpreterActionProperty[];
+  handler: (
+    payload: AdapterInterfaceRunActionData
+  ) => Promise<AdapterActionResult | null>;
+  parameters: InterpreterActionProperty[];
 };
 
 export type Action = ActionJob | ActionCommand;
+
+export type AdapterInterfaceRunActionData<T = any> = {
+  id: string;
+  parameters: T;
+  toolId?: string;
+};
 
 export type AdapterInterface = {
   initialise: () => Promise<void>;
 
   runAction: (
-    id: string,
-    properties: any
+    payload: AdapterInterfaceRunActionData
   ) => Promise<AdapterActionResult | null>;
 
   getInterpreterActions: () => Promise<InterpreterAction[]>;

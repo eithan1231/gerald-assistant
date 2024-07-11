@@ -1,19 +1,21 @@
 import { AdapterActionResult } from "~/adapter.js";
 import { InterpreterAction } from "~/interpreter.js";
 import { unixTimestamp } from "~/util.js";
-import { Action } from "./index.js";
+import { Action, AdapterInterfaceRunActionData } from "./index.js";
 import { readFile } from "node:fs/promises";
 
 export class AdapterTimer {
   private actions: Action[] = [];
 
   public initialise = async () => {
+    console.log("[AdapterTimer/initialise] Started");
+
     this.actions.push({
       type: "command",
       id: "set_timer",
       description: "Sets a timer for a specified duration for an alarm",
       handler: this.handlerSetTimer,
-      properties: [
+      parameters: [
         {
           name: "duration",
           description: "Duration of timer, in seconds",
@@ -26,38 +28,46 @@ export class AdapterTimer {
       type: "job",
       id: "run_timer",
       handler: this.handlerRunTimer,
-      properties: [],
+      parameters: [],
     });
   };
 
-  public handlerSetTimer = async (properties: {
-    duration: number;
-  }): Promise<AdapterActionResult> => {
+  public handlerSetTimer = async (
+    payload: AdapterInterfaceRunActionData<{ duration: number }>
+  ): Promise<AdapterActionResult> => {
+    if (!payload.toolId) {
+      throw new Error("Tool ID not set");
+    }
+
     console.log(
-      `[AdapterTimer/handlerSetTimer] Setting timer for in ${properties.duration} seconds`
+      `[AdapterTimer/handlerSetTimer] Setting timer for in ${payload.parameters.duration} seconds`
     );
 
     return {
       success: true,
       results: [
         {
-          type: "interpreter-message",
+          type: "interpreter-tool-message",
+          toolId: payload.toolId,
           message: "Timer set",
+        },
+        {
+          type: "interpreter-evaluate",
         },
         {
           type: "schedule",
 
-          executeAt: unixTimestamp() + properties.duration,
+          executeAt: unixTimestamp() + payload.parameters.duration,
 
           actionId: "run_timer",
-          actionProperties: {},
+          actionParameters: {},
         },
       ],
     };
   };
 
   public handlerRunTimer = async (
-    properties: any
+    payload: AdapterInterfaceRunActionData
   ): Promise<AdapterActionResult> => {
     const content = await readFile("./config/audio/ding-dong.wav");
 
@@ -65,17 +75,17 @@ export class AdapterTimer {
       success: true,
       results: [
         {
-          type: "sound",
+          type: "client-sound",
           data: content,
         },
       ],
     };
   };
 
-  public runAction = async (id: string, properties: any) => {
+  public runAction = async (payload: AdapterInterfaceRunActionData) => {
     for (const action of this.actions) {
-      if (action.id === id) {
-        return await action.handler(properties);
+      if (action.id === payload.id) {
+        return await action.handler(payload);
       }
     }
 
@@ -89,7 +99,7 @@ export class AdapterTimer {
         return {
           id: action.id,
           description: action.description,
-          properties: action.properties,
+          parameters: action.parameters,
         };
       });
   };

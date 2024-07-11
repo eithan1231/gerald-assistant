@@ -1,41 +1,61 @@
-import { AdapterInterface } from "./adapters/index.js";
-import { AdapterLifx } from "./adapters/lifex.js";
-import { AdapterTimer } from "./adapters/timer.js";
+import {
+  AdapterInterface,
+  AdapterInterfaceRunActionData,
+} from "./adapters/index.js";
 import { InterpreterAction } from "./interpreter.js";
 import { timeout, unixTimestamp } from "./util.js";
 
-export type AdapterActionResultScheduleAction = {
+export type AdapterActionResultItemScheduleAction = {
   type: "schedule";
 
   executeAt: number;
 
   actionId: string;
-  actionProperties: any;
+  actionParameters: any;
 };
 
-export type AdapterActionResultInterpreterMessage = {
-  type: "interpreter-message";
+export type AdapterActionResultItemInterpreterUserMessage = {
+  type: "interpreter-user-message";
   message: string;
 };
 
-export type AdapterActionResultTTS = {
-  type: "tts";
+export type AdapterActionResultItemInterpreterAssistantMessage = {
+  type: "interpreter-assistant-message";
   message: string;
 };
 
-export type AdapterActionResultSound = {
-  type: "sound";
+export type AdapterActionResultItemInterpreterToolMessage = {
+  type: "interpreter-tool-message";
+  toolId: string;
+  message: string;
+};
+
+export type AdapterActionResultItemInterpreterEvaluate = {
+  type: "interpreter-evaluate";
+};
+
+export type AdapterActionResultItemTTS = {
+  type: "client-tts";
+  message: string;
+};
+
+export type AdapterActionResultItemSound = {
+  type: "client-sound";
   data: Buffer;
 };
 
+export type AdapterActionResultItem =
+  | AdapterActionResultItemScheduleAction
+  | AdapterActionResultItemInterpreterUserMessage
+  | AdapterActionResultItemInterpreterAssistantMessage
+  | AdapterActionResultItemInterpreterToolMessage
+  | AdapterActionResultItemInterpreterEvaluate
+  | AdapterActionResultItemTTS
+  | AdapterActionResultItemSound;
+
 export type AdapterActionResult = {
   success: true;
-  results: Array<
-    | AdapterActionResultScheduleAction
-    | AdapterActionResultInterpreterMessage
-    | AdapterActionResultTTS
-    | AdapterActionResultSound
-  >;
+  results: Array<AdapterActionResultItem>;
 };
 
 type AdapterActionSchedule = {
@@ -47,12 +67,12 @@ type AdapterActionSchedule = {
   clientName: string;
 
   actionId: string;
-  actionProperties: any;
+  actionParameters: any;
 };
 
 type AdapterSubscription = {
   clientName: string;
-  callback: (result: AdapterActionResult) => Promise<void>;
+  callback: (result: AdapterActionResultItem) => Promise<void>;
 };
 
 export class Adapter {
@@ -64,10 +84,7 @@ export class Adapter {
 
   private disruptLoop = false;
 
-  constructor() {
-    this.adapters.push(new AdapterTimer());
-    this.adapters.push(new AdapterLifx());
-  }
+  constructor() {}
 
   public addAdapter = (adapter: AdapterInterface) => {
     this.adapters.push(adapter);
@@ -99,15 +116,12 @@ export class Adapter {
 
         schedule.status = "running";
 
-        const result = await this.runAction(
-          schedule.clientName,
-          schedule.actionId,
-          schedule.actionProperties
-        );
-
-        if (result) {
-          this.publish(schedule.clientName, result);
-        }
+        await this.runActions(schedule.clientName, [
+          {
+            id: schedule.actionId,
+            parameters: schedule.actionParameters,
+          },
+        ]);
 
         schedule.status = "finished";
       }
@@ -120,44 +134,53 @@ export class Adapter {
     }
   };
 
-  public runAction = async (
+  public runActions = async (
     clientName: string,
-    actionId: string,
-    actionProperties: any
-  ): Promise<AdapterActionResult | null> => {
-    console.log(
-      `[Adapter/runAction] clientName ${clientName}, actionId ${actionId}, actionProperties ${JSON.stringify(
-        actionProperties
-      )}`
-    );
+    actions: Array<AdapterInterfaceRunActionData>
+  ) => {
+    console.log(`[Adapter/runAction] clientName ${clientName}`);
 
-    for (const adapter of this.adapters) {
-      const result = await adapter.runAction(actionId, actionProperties);
+    let results: AdapterActionResultItem[] = [];
 
-      if (!result) {
+    for (const action of actions) {
+      for (const adapter of this.adapters) {
+        const res = await adapter.runAction(action);
+
+        if (!res || !res.success) {
+          continue;
+        }
+
+        results.push(...res.results);
+      }
+    }
+
+    for (const result of results) {
+      if (result.type === "interpreter-evaluate") {
         continue;
       }
 
-      for (const actionResult of result.results) {
-        if (actionResult.type === "schedule") {
-          this.schedules.push({
-            status: "pending",
+      if (result.type === "schedule") {
+        this.schedules.push({
+          status: "pending",
 
-            createdAt: unixTimestamp(),
-            executeAt: actionResult.executeAt,
+          createdAt: unixTimestamp(),
+          executeAt: result.executeAt,
 
-            clientName: clientName,
+          clientName: clientName,
 
-            actionId: actionResult.actionId,
-            actionProperties: actionResult.actionProperties,
-          });
-        }
+          actionId: result.actionId,
+          actionParameters: result.actionParameters,
+        });
       }
 
-      return result;
+      await this.publish(clientName, result);
     }
 
-    return null;
+    if (results.find(({ type }) => type === "interpreter-evaluate")) {
+      await this.publish(clientName, {
+        type: "interpreter-evaluate",
+      });
+    }
   };
 
   public getActions = async (): Promise<InterpreterAction[]> => {
@@ -200,7 +223,10 @@ export class Adapter {
     }
   };
 
-  private publish = async (clientName: string, result: AdapterActionResult) => {
+  private publish = async (
+    clientName: string,
+    result: AdapterActionResultItem
+  ) => {
     const subscription = this.subscriptions.find(
       (sub) => sub.clientName === clientName
     );

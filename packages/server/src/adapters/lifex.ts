@@ -2,13 +2,17 @@ import LifxClient from "lifx-lan-client";
 import { AdapterActionResult } from "~/adapter.js";
 import { getLifxConfig } from "~/config/lifx.js";
 import { InterpreterAction, InterpreterActionProperty } from "~/interpreter.js";
-import { Action, AdapterInterface } from "./index.js";
+import {
+  Action,
+  AdapterInterface,
+  AdapterInterfaceRunActionData,
+} from "./index.js";
 
-type StandardProperties = {
+type StandardParameters = {
   location?: string;
 };
 
-type ProfileProperties = StandardProperties & {
+type ProfileParameters = StandardParameters & {
   color?: string;
   brightness?: string;
 };
@@ -18,6 +22,8 @@ export class AdapterLifx implements AdapterInterface {
   private client?: LifxClient.Client;
 
   public initialise = async (): Promise<void> => {
+    console.log("[AdapterLifx/initialise] Started");
+
     this.client = new LifxClient.Client();
 
     const clientInitPromise = () => {
@@ -42,7 +48,7 @@ export class AdapterLifx implements AdapterInterface {
       id: "turn_lights_off",
       description: "Turn the lights off",
       handler: this.handlerLightsOff,
-      properties: [
+      parameters: [
         {
           name: "location",
           description: "Placement or location of light",
@@ -56,7 +62,7 @@ export class AdapterLifx implements AdapterInterface {
       id: "turn_lights_on",
       description: "Turn the lights on",
       handler: this.handlerLightsOn,
-      properties: [
+      parameters: [
         {
           name: "location",
           description: "Placement or location of light",
@@ -70,7 +76,7 @@ export class AdapterLifx implements AdapterInterface {
       id: "change_lights_profile",
       description: "Changes light brightness and color",
       handler: this.handlerLightsOn,
-      properties: [
+      parameters: [
         {
           name: "location",
           description: "Placement or location of light",
@@ -128,10 +134,14 @@ export class AdapterLifx implements AdapterInterface {
   };
 
   public handlerLightsOff = async (
-    properties: StandardProperties
+    payload: AdapterInterfaceRunActionData
   ): Promise<AdapterActionResult> => {
+    if (!payload.toolId) {
+      throw new Error("Tool ID not found");
+    }
+
     const lights = await this.findLightsByLocation(
-      properties.location ?? "all"
+      payload.parameters.location ?? "all"
     );
 
     for (const light of lights) {
@@ -142,7 +152,8 @@ export class AdapterLifx implements AdapterInterface {
       success: true,
       results: [
         {
-          type: "interpreter-message",
+          type: "interpreter-tool-message",
+          toolId: payload.toolId,
           message: "Okay, lights off.",
         },
       ],
@@ -150,10 +161,14 @@ export class AdapterLifx implements AdapterInterface {
   };
 
   public handlerLightsOn = async (
-    properties: StandardProperties
+    payload: AdapterInterfaceRunActionData
   ): Promise<AdapterActionResult> => {
+    if (!payload.toolId) {
+      throw new Error("Tool ID not found");
+    }
+
     const lights = await this.findLightsByLocation(
-      properties.location ?? "all"
+      payload.parameters.location ?? "all"
     );
 
     for (const light of lights) {
@@ -164,7 +179,8 @@ export class AdapterLifx implements AdapterInterface {
       success: true,
       results: [
         {
-          type: "interpreter-message",
+          type: "interpreter-tool-message",
+          toolId: payload.toolId,
           message: "Okay, lights on.",
         },
       ],
@@ -172,10 +188,14 @@ export class AdapterLifx implements AdapterInterface {
   };
 
   public handleLightsProfile = async (
-    properties: ProfileProperties
+    payload: AdapterInterfaceRunActionData
   ): Promise<AdapterActionResult> => {
+    if (!payload.toolId) {
+      throw new Error("Tool ID not found");
+    }
+
     const lights = await this.findLightsByLocation(
-      properties.location ?? "all"
+      payload.parameters.location ?? "all"
     );
 
     await Promise.all(
@@ -192,19 +212,19 @@ export class AdapterLifx implements AdapterInterface {
           );
         };
 
-        if (properties.brightness) {
+        if (payload.parameters.brightness) {
           const state = await getState();
 
           let brightness = state.color.brightness;
 
-          if (properties.brightness.startsWith("+")) {
+          if (payload.parameters.brightness.startsWith("+")) {
             brightness =
-              brightness + Number(properties.brightness.substring(1));
-          } else if (properties.brightness.startsWith("-")) {
+              brightness + Number(payload.parameters.brightness.substring(1));
+          } else if (payload.parameters.brightness.startsWith("-")) {
             brightness =
-              brightness - Number(properties.brightness.substring(1));
+              brightness - Number(payload.parameters.brightness.substring(1));
           } else {
-            brightness = Number(properties.brightness);
+            brightness = Number(payload.parameters.brightness);
           }
 
           if (brightness < 0) {
@@ -218,8 +238,8 @@ export class AdapterLifx implements AdapterInterface {
           light.color(state.color.hue, state.color.saturation, brightness);
         }
 
-        if (properties.color) {
-          light.colorRgbHex(properties.color);
+        if (payload.parameters.color) {
+          light.colorRgbHex(payload.parameters.color);
         }
       })
     );
@@ -228,17 +248,18 @@ export class AdapterLifx implements AdapterInterface {
       success: true,
       results: [
         {
-          type: "interpreter-message",
+          type: "interpreter-tool-message",
+          toolId: payload.toolId,
           message: "Okay, lights updated.",
         },
       ],
     };
   };
 
-  public runAction = async (id: string, properties: any) => {
+  public runAction = async (payload: AdapterInterfaceRunActionData) => {
     for (const action of this.actions) {
-      if (action.id === id) {
-        return await action.handler(properties);
+      if (action.id === payload.id) {
+        return await action.handler(payload);
       }
     }
 
@@ -252,7 +273,7 @@ export class AdapterLifx implements AdapterInterface {
         return {
           id: action.id,
           description: action.description,
-          properties: action.properties,
+          parameters: action.parameters,
         };
       });
   };

@@ -13,7 +13,7 @@ export type InterpreterActionProperty = {
 export type InterpreterAction = {
   id: string;
   description?: string;
-  properties?: Array<InterpreterActionProperty>;
+  parameters?: Array<InterpreterActionProperty>;
 };
 
 export type InterpreterProcessAction = {
@@ -97,9 +97,16 @@ export class Interpreter {
     this.endedAt = unixTimestamp();
   };
 
-  public addMessage = async (content: string) => {
+  public addUserMessage = async (content: string) => {
     this.messages.push({
       role: "user",
+      content: content,
+    });
+  };
+
+  public addAssistantMessage = async (content: string) => {
+    this.messages.push({
+      role: "assistant",
       content: content,
     });
   };
@@ -118,13 +125,13 @@ export class Interpreter {
         const parameters: any = {
           type: "object",
           properties: {},
-          required: action.properties
+          required: action.parameters
             ?.filter((param) => param.required)
             .map((param) => param.name),
         };
 
-        if (action.properties) {
-          for (const property of action.properties) {
+        if (action.parameters) {
+          for (const property of action.parameters) {
             parameters.properties[property.name] = {
               type: property.type ?? "string",
               enum: property.enum,
