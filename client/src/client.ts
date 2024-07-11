@@ -5,9 +5,8 @@ import { MicrophoneDirect } from "./microphone-direct.js";
 import { Microphone } from "./microphone.js";
 import { MicrophoneFilter } from "./microphone-filter.js";
 
-const CONFIG_ENDPOINT = process.env.ENDPOINT ?? "ws://localhost:3000/";
-
 export type ClientOptions = {
+  endpoint: string;
   name: string;
   microphone: "filtered" | "direct";
 };
@@ -79,7 +78,7 @@ export class Client {
       return this.socket;
     }
 
-    this.socket = new WebSocket(CONFIG_ENDPOINT);
+    this.socket = new WebSocket(this.options.endpoint);
 
     this.socket.once("open", () => {
       this.sendSocketJson({
