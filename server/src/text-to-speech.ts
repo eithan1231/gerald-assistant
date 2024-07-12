@@ -31,6 +31,12 @@ export const createTextToSpeech = async (
   const response = await fetch(`${endpoint}?${params.toString()}`);
 
   if (response.status !== 200) {
+    console.log(`[createTextToSpeech] Failed to TTS ${response.status}`);
+
+    return {
+      success: false,
+      message: "Failed to convert text to speech",
+    };
   }
 
   const responseContent: Buffer[] = [];

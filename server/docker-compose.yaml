@@ -1,0 +1,57 @@
+version: "3.8"
+
+services:
+  server:
+    container_name: ga-server
+    image: eithan1231/gerald-assistant-server
+    restart: unless-stopped
+    environment:
+      # Listen words. Can be used for changing the name of your agent, configured to
+      # "jeff,jeffery,gerald" by default.
+      #
+      # Uncommon or rare names might be harder for the speach-to-text engine to pick up.
+      # Gerald is often picked up as "joe", which is not ideal, but hence the "Jeff"
+      - LISTEN_WORDS=jeff,jeffery,gerald
+
+      # Your OpenAI key geerated by OpenAI. This is required.
+      - OPENAI_KEY=SECRET_OPENAI_KEY
+
+      # mimic3, used for text-to-speach.
+      - ENDPOINT_TTS=http://mimic3:59125/api/tts
+
+      # faster-whisper-server, used for speach-to-text.
+      - ENDPOINT_TRANSCRIBE=http://faster-whisper-server:8000/v1/audio/transcriptions
+
+    volumes:
+      - /dev/snd:/dev/snd
+
+  faster-whisper-server:
+    container_name: faster-whisper-server
+    # To run model on GPU, utilise the tag "latest-cuda", for cpu use "latest-cpu".
+    # Most models will run sufficiently on CPU.
+    image: fedirz/faster-whisper-server:latest-cpu
+    restart: always
+    volumes:
+      # Mounting this volume will vastly improve startup times, and will avoid
+      # the model being re-downloaded
+      - ./cache/faster-whisper/huggingface:/root/.cache/huggingface
+    environment:
+      # faster-whisper models for speach-to-text. I have found the base-en model to be a great
+      # compromise between speed and performance. Hallucinations for "okay okay okay", or "please
+      # subscribe to xyz" are not entirely uncommon, but rare enough to not be impactful.
+      #
+      # 789MB - Systran/faster-distil-whisper-medium.en
+      # 322MB - Systran/faster-distil-whisper-small.en
+      # 145MB - Systran/faster-whisper-base.en
+      # 75MB - Systran/faster-whisper-tiny.en
+      #
+      # More can be found here:
+      # https://huggingface.co/Systran
+      - WHISPER_MODEL=Systran/faster-whisper-base.en
+
+  mimic3:
+    container_name: mimic3
+    image: mycroftai/mimic3
+    restart: always
+    volumes:
+      - ./cache/mimic3:/home/mimic3/.local/share/mycroft/mimic3
