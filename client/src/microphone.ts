@@ -48,6 +48,9 @@ export class Microphone {
     // Set sample rate to 16000
     args.push(`-ar 16000`);
 
+    // Set logging mode to fetal only, unrecoverable errors
+    args.push(`-v error`);
+
     // Stream to stdout, using encoding "s16le" -> "PCM signed 16-bit little-endian"
     args.push("-f s16le -");
 
@@ -132,5 +135,8 @@ export class Microphone {
     }
 
     this.ffmpegLogs.push(chunk.toString());
+
+    console.log("[Microphone/onFfmpegLog] Error ocurred! See below");
+    console.error(chunk.toString());
   };
 }
