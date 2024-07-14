@@ -1,40 +1,71 @@
 import { ChildProcess, spawn } from "node:child_process";
 import path from "node:path";
 
+const audioSampleRate = 16000;
+const audioBitSize = 16;
+const audioFormat = "s16le"; // "PCM signed 16-bit little-endian"
+
+export type MicrophoneOptions = {
+  /**
+   * @example 2.2
+   * @example 1
+   * @example 0.5
+   */
+  inactivityFlush: number;
+
+  /**
+   * @example hw:1,0
+   */
+  ffmpegAlsaInterface: string;
+
+  /**
+   * @example 2
+   */
+  ffmpegAlsaChannels: number;
+
+  /**
+   *
+   */
+  ffmpegFilterEnabled: boolean;
+};
+
 export class Microphone {
+  private options: MicrophoneOptions;
+
   private ffmpeg?: ChildProcess;
 
   private paused = false;
 
   private audioBufferTotalLength = 0;
-  private audioBufferLastDetectionIncrement = 0;
+  private audioBufferLastDetectedIncrement = 0;
   private audioBuffer: Buffer[] = [];
 
+  private sampleDataPerSecond = 0;
+
   private ffmpegLogs: string[] = [];
+
+  constructor(options: MicrophoneOptions) {
+    this.options = options;
+  }
 
   public onData: (audioBuffer: Buffer) => void = () => {
     throw new Error("Not implemented error");
   };
 
   public start() {
+    console.log("[Microphone/start] Starting microphone.");
+
     this.paused = false;
 
-    const alsaInterface = process.env.FFMPEG_ALSA_INTERFACE ?? "hw:0,0";
-    const alsaChannels = process.env.FFMPEG_ALSA_CHANNELS ?? "2";
-
-    const filterEnabled =
-      !process.env.FFMPEG_FILTER || process.env.FFMPEG_FILTER === "true";
-
     const args: string[] = [];
+    args.push(
+      `-f alsa -channels ${this.options.ffmpegAlsaChannels} -i ${this.options.ffmpegAlsaInterface}`
+    );
 
-    // Microphone input using Alsa, on card 0, device 0
-    args.push(`-f alsa -channels ${alsaChannels} -i ${alsaInterface}`);
-
-    // Audio-Channel 1 (ensure mono audio)
+    // Audio-Channel
     args.push("-ac 1");
 
-    // Background sound filtering
-    if (filterEnabled) {
+    if (this.options.ffmpegFilterEnabled) {
       console.log("[Microphone/start] Filtering enabled");
 
       const modelFilename = path.join(
@@ -45,20 +76,37 @@ export class Microphone {
       args.push(`-af \"arnndn=m='${modelFilename}'\"`);
     }
 
-    // Set sample rate to 16000
-    args.push(`-ar 16000`);
+    // Sample rate
+    args.push(`-ar ${audioSampleRate}`);
 
-    // Set logging mode to fetal only, unrecoverable errors
+    // Log level
     args.push(`-v error`);
 
-    // Stream to stdout, using encoding "s16le" -> "PCM signed 16-bit little-endian"
-    args.push("-f s16le -");
+    // Stream to stdout
+    args.push(`-f ${audioFormat} -`);
 
     this.ffmpeg = spawn("ffmpeg", args, { shell: true });
 
-    this.ffmpeg.stdout?.on("data", (chunk: Buffer) =>
-      this.onFfmpegAudio(chunk)
-    );
+    this.ffmpeg.stdout?.on("data", (chunk: Buffer) => {
+      // Resample audio chunk sizes every so often, it shouldn't change, but best to be safe.
+      if (
+        this.audioBufferLastDetectedIncrement === 1 ||
+        this.sampleDataPerSecond === 0
+      ) {
+        const sampleDataPerSecond =
+          audioSampleRate / (chunk.length * (8 / audioBitSize));
+
+        if (this.sampleDataPerSecond !== sampleDataPerSecond) {
+          console.log(
+            `[Microphone/ffmpeg -> data] Sample data per second value updated from ${this.sampleDataPerSecond} to ${sampleDataPerSecond}`
+          );
+
+          this.sampleDataPerSecond = sampleDataPerSecond;
+        }
+      }
+
+      this.onFfmpegAudio(chunk);
+    });
 
     this.ffmpeg.stderr?.on("data", (chunk: Buffer) => this.onFfmpegLog(chunk));
   }
@@ -92,9 +140,11 @@ export class Microphone {
       return;
     }
 
-    const flushAt = 256;
+    this.audioBufferLastDetectedIncrement++;
 
-    this.audioBufferLastDetectionIncrement++;
+    const flushAt = Math.round(
+      this.sampleDataPerSecond * this.options.inactivityFlush
+    );
 
     let soundParts = 0;
     for (let i = 0; i < chunk.length; i += 2) {
@@ -105,11 +155,12 @@ export class Microphone {
       }
     }
 
+    // If more than an 8th of this sample has sound.
     if (soundParts > chunk.length / 2 / 8) {
-      this.audioBufferLastDetectionIncrement = 0;
+      this.audioBufferLastDetectedIncrement = 0;
     }
 
-    if (this.audioBufferLastDetectionIncrement <= flushAt) {
+    if (this.audioBufferLastDetectedIncrement <= flushAt) {
       this.audioBufferTotalLength += chunk.length;
       this.audioBuffer.push(chunk);
     }
@@ -122,7 +173,7 @@ export class Microphone {
       return this.audioBufferFlush();
     }
 
-    if (this.audioBufferLastDetectionIncrement === flushAt) {
+    if (this.audioBufferLastDetectedIncrement === flushAt) {
       console.log(`[MicrophoneFilter/onFfmpegAudio] Flushing ffmpeg audio`);
 
       return this.audioBufferFlush();

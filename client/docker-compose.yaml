@@ -13,6 +13,12 @@ services:
       # Name of client. (e.g. kitchen, lounge, bedroom, bathroom, gerald, assistant)
       - CLIENT_NAME=Gerald Assistant
 
+      # Duration of inactivity after sounds are detected at which we flush the audio buffer to the
+      # server. Must be greater than 0.2 and less than 10. Recommended to be between 2 and 3. If
+      # it is set too low, it will send the audio mid-sentence, and if its set too high, there will
+      # be an unrealistic delay between when you talk, and when you get a response.
+      - MICROPHONE_INACTIVITY_FLUSH=2.2
+
       # FFMPEG Alsa Channels. The amount of input channels by the input device, default is 2, but
       # your sound device may only support 1.
       #
