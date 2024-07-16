@@ -5,6 +5,8 @@ const audioSampleRate = 16000;
 const audioBitSize = 16;
 const audioFormat = "s16le"; // "PCM signed 16-bit little-endian"
 
+const audioByteSize = audioBitSize / 8;
+
 export type MicrophoneOptions = {
   /**
    * @example 2.2
@@ -94,7 +96,7 @@ export class Microphone {
         this.sampleDataPerSecond === 0
       ) {
         const sampleDataPerSecond =
-          audioSampleRate / (chunk.length * (8 / audioBitSize));
+          audioSampleRate / (chunk.length / audioByteSize);
 
         if (this.sampleDataPerSecond !== sampleDataPerSecond) {
           console.log(
@@ -147,7 +149,7 @@ export class Microphone {
     );
 
     let soundParts = 0;
-    for (let i = 0; i < chunk.length; i += 2) {
+    for (let i = 0; i < chunk.length; i += audioByteSize) {
       const sample = Math.abs(chunk.readInt16LE(i));
 
       if (sample > 2000) {
@@ -156,7 +158,7 @@ export class Microphone {
     }
 
     // If more than an 8th of this sample has sound.
-    if (soundParts > chunk.length / 2 / 8) {
+    if (soundParts > chunk.length / audioByteSize / 8) {
       this.audioBufferLastDetectedIncrement = 0;
     }
 
@@ -165,7 +167,7 @@ export class Microphone {
       this.audioBuffer.push(chunk);
     }
 
-    if (this.audioBufferTotalLength > 16000 * 15) {
+    if (this.audioBufferTotalLength > audioSampleRate * audioByteSize * 15) {
       console.log(
         "[MicrophoneFilter/onFfmpegAudio ] Flushing ffmpeg audio due to buffer size"
       );
