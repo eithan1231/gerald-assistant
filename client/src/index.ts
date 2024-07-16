@@ -28,6 +28,8 @@ const main = async () => {
 
   const endpoint = getEnv("ENDPOINT", "ws://localhost:3000/");
 
+  const speakerInterface = getEnv("SPEAKER_INTERFACE", "") ?? undefined;
+
   const microphoneInactivityFlush = getEnvAsNumber(
     "MICROPHONE_INACTIVITY_FLUSH",
     "2.2"
@@ -65,6 +67,7 @@ const main = async () => {
     microphoneFfmpegAlsaInterface,
     microphoneFfmpegAlsaChannels,
     microphoneFfmpegFilterEnabled,
+    speakerInterface,
   });
 
   await client.start();

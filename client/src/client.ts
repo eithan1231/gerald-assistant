@@ -10,6 +10,8 @@ export type ClientOptions = {
   microphoneFfmpegAlsaInterface: string;
   microphoneFfmpegAlsaChannels: number;
   microphoneFfmpegFilterEnabled: boolean;
+
+  speakerInterface: string;
 };
 
 export class Client {
@@ -27,7 +29,9 @@ export class Client {
   constructor(options: ClientOptions) {
     this.options = options;
 
-    this.speaker = new Speaker();
+    this.speaker = new Speaker({
+      device: this.options.speakerInterface,
+    });
 
     this.microphone = new Microphone({
       inactivityFlush: this.options.microphoneInactivityFlush,

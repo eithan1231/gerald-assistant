@@ -38,5 +38,11 @@ services:
       # This option will attempt to filter out background sound such as static, fans, chairs moving,
       # doors opening and closing, etc.
       - FFMPEG_FILTER=true
+
+      # Speaker output interface, this determines the speaker output hardware device. Omitted will select
+      # the defaul device. See "device" in the following page...
+      #
+      # https://github.com/TooTallNate/node-speaker?tab=readme-ov-file#new-speaker-options----speaker-instance
+      - SPEAKER_INTERFACE=
     volumes:
       - /dev/snd:/dev/snd

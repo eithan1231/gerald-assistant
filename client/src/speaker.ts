@@ -1,7 +1,13 @@
 import SpeakerLib from "speaker-arm64";
 import { timeout } from "./util.js";
 
+export type SpeakerOptions = {
+  device?: string;
+};
+
 export class Speaker {
+  private options: SpeakerOptions;
+
   private speaker: SpeakerLib;
 
   private running = false;
@@ -12,12 +18,15 @@ export class Speaker {
   public onAudioPlay?: () => void;
   public onAudioStop?: () => void;
 
-  constructor() {
+  constructor(options: SpeakerOptions) {
+    this.options = options;
+
     this.speaker = new SpeakerLib({
       channels: 1,
       sampleRate: 22050,
       bitDepth: 16,
-    });
+      device: this.options.device,
+    } as any);
   }
 
   private speakerWrite = (buffer: Buffer) =>
