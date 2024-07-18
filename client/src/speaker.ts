@@ -2,7 +2,8 @@ import SpeakerLib from "speaker-arm64";
 import { timeout } from "./util.js";
 
 export type SpeakerOptions = {
-  device?: string;
+  device: string;
+  channels: number;
 };
 
 export class Speaker {
@@ -22,7 +23,7 @@ export class Speaker {
     this.options = options;
 
     this.speaker = new SpeakerLib({
-      channels: 1,
+      channels: this.options.channels,
       sampleRate: 22050,
       bitDepth: 16,
       device: this.options.device,

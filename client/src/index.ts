@@ -29,6 +29,7 @@ const main = async () => {
   const endpoint = getEnv("ENDPOINT", "ws://localhost:3000/");
 
   const speakerInterface = getEnv("SPEAKER_INTERFACE", "") ?? undefined;
+  const speakerChannels = getEnvAsNumber("SPEAKER_CHANNELS", "2") ?? 2;
 
   const microphoneInactivityFlush = getEnvAsNumber(
     "MICROPHONE_INACTIVITY_FLUSH",
@@ -60,6 +61,10 @@ const main = async () => {
     throw new Error("MICROPHONE_INACTIVITY_FLUSH is above 10 seconds");
   }
 
+  if (speakerChannels <= 0 || speakerChannels >= 32) {
+    throw new Error("SPEAKER_CHANNELS must be between or equal to 1 and 32");
+  }
+
   const client = new Client({
     name: clientName,
     endpoint,
@@ -68,6 +73,7 @@ const main = async () => {
     microphoneFfmpegAlsaChannels,
     microphoneFfmpegFilterEnabled,
     speakerInterface,
+    speakerChannels,
   });
 
   await client.start();

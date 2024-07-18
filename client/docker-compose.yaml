@@ -43,6 +43,9 @@ services:
       # the defaul device. See "device" in the following page...
       #
       # https://github.com/TooTallNate/node-speaker?tab=readme-ov-file#new-speaker-options----speaker-instance
-      - SPEAKER_INTERFACE=
+      - SPEAKER_INTERFACE=hw:0,0
+
+      # Speaker output interface channels count, determines how many output channels there are.
+      - SPEAKER_CHANNELS=1
     volumes:
       - /dev/snd:/dev/snd

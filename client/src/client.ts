@@ -12,6 +12,7 @@ export type ClientOptions = {
   microphoneFfmpegFilterEnabled: boolean;
 
   speakerInterface: string;
+  speakerChannels: number;
 };
 
 export class Client {
@@ -31,6 +32,7 @@ export class Client {
 
     this.speaker = new Speaker({
       device: this.options.speakerInterface,
+      channels: this.options.speakerChannels,
     });
 
     this.microphone = new Microphone({
