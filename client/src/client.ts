@@ -9,6 +9,7 @@ export type ClientOptions = {
   microphoneInactivityFlush: number;
   microphoneFfmpegAlsaInterface: string;
   microphoneFfmpegAlsaChannels: number;
+  microphoneFfmpegFilterVolume: number;
   microphoneFfmpegFilterEnabled: boolean;
 
   speakerInterface: string;
@@ -39,6 +40,7 @@ export class Client {
       inactivityFlush: this.options.microphoneInactivityFlush,
       ffmpegAlsaChannels: this.options.microphoneFfmpegAlsaChannels,
       ffmpegAlsaInterface: this.options.microphoneFfmpegAlsaInterface,
+      ffmpegFilterVolume: this.options.microphoneFfmpegFilterVolume,
       ffmpegFilterEnabled: this.options.microphoneFfmpegFilterEnabled,
     });
 

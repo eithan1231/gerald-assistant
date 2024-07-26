@@ -46,6 +46,11 @@ const main = async () => {
     "2"
   );
 
+  const microphoneFfmpegFilterVolume = getEnvAsNumber(
+    "FFMPEG_FILTER_VOLUME",
+    "1"
+  );
+
   const microphoneFfmpegFilterEnabled = getEnvAsBoolean(
     "FFMPEG_FILTER",
     "true"
@@ -71,6 +76,7 @@ const main = async () => {
     microphoneInactivityFlush,
     microphoneFfmpegAlsaInterface,
     microphoneFfmpegAlsaChannels,
+    microphoneFfmpegFilterVolume,
     microphoneFfmpegFilterEnabled,
     speakerInterface,
     speakerChannels,

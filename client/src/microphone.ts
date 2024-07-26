@@ -26,6 +26,13 @@ export type MicrophoneOptions = {
   ffmpegAlsaChannels: number;
 
   /**
+   * FFMpeg defaults to 1
+   * @requires - ffmpegFilterEnabled to be enabled
+   * @example 1
+   */
+  ffmpegFilterVolume?: number;
+
+  /**
    *
    */
   ffmpegFilterEnabled: boolean;
@@ -75,7 +82,16 @@ export class Microphone {
         "./config/rnnoise-models/somnolent-hogwash/sh.rnnn"
       );
 
-      args.push(`-af \"arnndn=m='${modelFilename}'\"`);
+      const filterArgs = [];
+
+      if (this.options.ffmpegFilterVolume !== undefined) {
+        filterArgs.push(`volume=${this.options.ffmpegFilterVolume}`);
+        filterArgs.push(`precision=double`);
+      }
+
+      filterArgs.push(`arnndn=m='${modelFilename}'`);
+
+      args.push(`-af \"${filterArgs.join(":")}\"`);
     }
 
     // Sample rate
