@@ -28,23 +28,25 @@ export type MicrophoneOptions = {
   /**
    * @example hw:1,0
    */
-  ffmpegAlsaInterface: string;
+  alsaInterface: string;
 
   /**
    * @example 2
    */
-  ffmpegAlsaChannels: number;
+  alsaChannels: number;
 
   /**
    * FFMpeg defaults to 1
    * @example 1
    */
-  ffmpegFilterVolume?: number;
+  alsaVolume?: number;
 
   /**
+   * Whether or not we want to filter microphone background sounds.
    *
+   * Uses a machine learning model, might impact performance
    */
-  ffmpegFilterEnabled: boolean;
+  filter: boolean;
 };
 
 export class Microphone {
@@ -144,13 +146,13 @@ export class Microphone {
 
     const args: string[] = [];
 
-    args.push(`-t alsa ${this.options.ffmpegAlsaInterface}`);
+    args.push(`-t alsa ${this.options.alsaInterface}`);
 
     const channels = 1;
 
     args.push(
       `-t raw -b ${audioBitSize} -c ${channels} -r ${audioSampleRate} -e signed - vol ${
-        this.options.ffmpegFilterVolume ?? 1
+        this.options.alsaVolume ?? 1
       }`
     );
 
@@ -176,7 +178,7 @@ export class Microphone {
     args.push(`-ac 1`);
 
     // Input audio filtering (background sounds)
-    if (this.options.ffmpegFilterEnabled) {
+    if (this.options.filter) {
       console.log("[Microphone/start] Filtering enabled");
 
       const modelFilename = path.join(

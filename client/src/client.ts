@@ -6,11 +6,12 @@ import { Microphone } from "./microphone.js";
 export type ClientOptions = {
   endpoint: string;
   name: string;
+
   microphoneInactivityFlush: number;
-  microphoneFfmpegAlsaInterface: string;
-  microphoneFfmpegAlsaChannels: number;
-  microphoneFfmpegFilterVolume: number;
-  microphoneFfmpegFilterEnabled: boolean;
+  microphoneAlsaInterface: string;
+  microphoneAlsaChannels: number;
+  microphoneAlsaVolume: number;
+  microphoneFilter: boolean;
 
   speakerInterface: string;
   speakerChannels: number;
@@ -38,10 +39,10 @@ export class Client {
 
     this.microphone = new Microphone({
       inactivityFlush: this.options.microphoneInactivityFlush,
-      ffmpegAlsaChannels: this.options.microphoneFfmpegAlsaChannels,
-      ffmpegAlsaInterface: this.options.microphoneFfmpegAlsaInterface,
-      ffmpegFilterVolume: this.options.microphoneFfmpegFilterVolume,
-      ffmpegFilterEnabled: this.options.microphoneFfmpegFilterEnabled,
+      alsaChannels: this.options.microphoneAlsaChannels,
+      alsaInterface: this.options.microphoneAlsaInterface,
+      alsaVolume: this.options.microphoneAlsaVolume,
+      filter: this.options.microphoneFilter,
     });
 
     this.microphone.onData = this.onMicrophoneData;
