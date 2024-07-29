@@ -158,7 +158,8 @@ export class Microphone {
 
     console.log("[Microphone/spawnSox] args", args.join(" "));
 
-    return spawn("sox", args.join(" ").split(" "), {
+    return spawn("sox", args, {
+      shell: true,
       stdio: "pipe",
     });
   };
@@ -169,42 +170,54 @@ export class Microphone {
     const args = [];
 
     // Input format
-    args.push(`-f ${audioFormat}`);
+    args.push(`-f`);
+    args.push(audioFormat.toString());
 
     // Input sample-rate
-    args.push(`-ar ${audioSampleRate}`);
+    args.push(`-ar`);
+    args.push(audioSampleRate.toString());
 
     // Input audio-channels
-    args.push(`-ac 1`);
+    args.push(`-ac`);
+    args.push("1");
 
-    // Input audio filtering (background sounds)
+    // Input from STDIN
+    args.push(`-i`);
+    args.push("-");
+
+    // Output audio filtering (background sounds)
     if (this.options.filter) {
-      console.log("[Microphone/start] Filtering enabled");
+      console.log("[Microphone/spawnFfmpeg] Filtering enabled");
 
       const modelFilename = path.join(
         process.cwd(),
         "./config/rnnoise-models/somnolent-hogwash/sh.rnnn"
       );
 
-      args.push(`-af \"arnndn=m='${modelFilename}'\"`);
+      args.push(`-af`);
+      args.push(`\"arnndn=m='${modelFilename}'\"`);
     }
 
-    // Input from STDIN
-    args.push(`-i -`);
-
     // Output format
-    args.push(`-f ${audioFormat}`);
+    args.push(`-f`);
+    args.push(audioFormat);
+
+    // Output sample-rate
+    args.push(`-ar`);
+    args.push(audioSampleRate.toString());
 
     // Output to STDOUT
     args.push("-");
 
     // General logging mode
-    args.push("-v error");
+    args.push("-v");
+    args.push("error");
 
     console.log("[Microphone/spawnFfmpeg] args", args.join(" "));
 
-    return spawn("ffmpeg", args.join(" ").split(" "), {
+    return spawn("ffmpeg", args, {
       stdio: "pipe",
+      shell: true,
     });
   };
 

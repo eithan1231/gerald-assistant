@@ -2,6 +2,9 @@ import { WebSocket } from "ws";
 import { timeout } from "./util.js";
 import { Speaker } from "./speaker.js";
 import { Microphone } from "./microphone.js";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { getConfigOption } from "./config.js";
 
 export type ClientOptions = {
   endpoint: string;
@@ -183,6 +186,15 @@ export class Client {
 
   private onMicrophoneData = async (data: Buffer) => {
     await this.sendSocketAudio(data);
+
+    if (getConfigOption("MICROPHONE_DEBUG")) {
+      const date = new Date();
+      const filename = `recording-${date.getFullYear()}-${date.getMonth()}-${date.getDate()} ${date.getHours()}-${date.getMinutes()}-${date.getSeconds()} ${date
+        .getMilliseconds()
+        .toFixed(0)}.raw`;
+
+      await writeFile(path.join("debug", "recordings", filename), data);
+    }
   };
 
   private onSocketMessage = async (data: Buffer) => {
