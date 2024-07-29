@@ -2,15 +2,19 @@ import { WebSocket } from "ws";
 import { timeout } from "./util.js";
 import { Speaker } from "./speaker.js";
 import { Microphone } from "./microphone.js";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { getConfigOption } from "./config.js";
 
 export type ClientOptions = {
   endpoint: string;
   name: string;
+
   microphoneInactivityFlush: number;
-  microphoneFfmpegAlsaInterface: string;
-  microphoneFfmpegAlsaChannels: number;
-  microphoneFfmpegFilterVolume: number;
-  microphoneFfmpegFilterEnabled: boolean;
+  microphoneAlsaInterface: string;
+  microphoneAlsaChannels: number;
+  microphoneAlsaVolume: number;
+  microphoneFilter: boolean;
 
   speakerInterface: string;
   speakerChannels: number;
@@ -38,10 +42,10 @@ export class Client {
 
     this.microphone = new Microphone({
       inactivityFlush: this.options.microphoneInactivityFlush,
-      ffmpegAlsaChannels: this.options.microphoneFfmpegAlsaChannels,
-      ffmpegAlsaInterface: this.options.microphoneFfmpegAlsaInterface,
-      ffmpegFilterVolume: this.options.microphoneFfmpegFilterVolume,
-      ffmpegFilterEnabled: this.options.microphoneFfmpegFilterEnabled,
+      alsaChannels: this.options.microphoneAlsaChannels,
+      alsaInterface: this.options.microphoneAlsaInterface,
+      alsaVolume: this.options.microphoneAlsaVolume,
+      filter: this.options.microphoneFilter,
     });
 
     this.microphone.onData = this.onMicrophoneData;
@@ -182,6 +186,15 @@ export class Client {
 
   private onMicrophoneData = async (data: Buffer) => {
     await this.sendSocketAudio(data);
+
+    if (getConfigOption("MICROPHONE_DEBUG")) {
+      const date = new Date();
+      const filename = `recording-${date.getFullYear()}-${date.getMonth()}-${date.getDate()} ${date.getHours()}-${date.getMinutes()}-${date.getSeconds()} ${date
+        .getMilliseconds()
+        .toFixed(0)}.raw`;
+
+      await writeFile(path.join("debug", "recordings", filename), data);
+    }
   };
 
   private onSocketMessage = async (data: Buffer) => {
