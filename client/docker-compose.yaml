@@ -1,11 +1,12 @@
-version: "3.8"
-
 services:
   client:
     container_name: ga-client
     image: eithan1231/gerald-assistant-client
     restart: unless-stopped
+
+    # Privileged mode for accessing audio devices.
     privileged: true
+
     environment:
       # Websocket endpoint
       - ENDPOINT=ws://host.docker.internal:3000/
@@ -17,19 +18,23 @@ services:
       # server. Must be greater than 0.2 and less than 10. Recommended to be between 2 and 3. If
       # it is set too low, it will send the audio mid-sentence, and if its set too high, there will
       # be an unrealistic delay between when you talk, and when you get a response.
-      - MICROPHONE_INACTIVITY_FLUSH=2.2
+      #- MICROPHONE_INACTIVITY_FLUSH=2.2
+
+      # Alsa Microphone Interface, this determines the microphone input hardware device. The default is
+      # "hw:0,0". This is the `-i` flag as described in the following page:
+      #
+      # https://trac.ffmpeg.org/wiki/Capture/ALSA
+      #- MICROPHONE_ALSA_INTERFACE=hw:0,0
 
       # FFMPEG Alsa Channels. The amount of input channels by the input device, default is 2, but
       # your sound device may only support 1.
       #
       # https://trac.ffmpeg.org/wiki/Capture/ALSA
-      - FFMPEG_ALSA_CHANNELS=2
+      #- MICROPHONE_ALSA_CHANNELS=2
 
-      # FFMPEG Alsa Interface, this determines the microphone input hardware device. The default is
-      # "hw:0,0". This is the `-i` flag as described in the following page:
-      #
-      # https://trac.ffmpeg.org/wiki/Capture/ALSA
-      - FFMPEG_ALSA_INTERFACE=hw:0,0
+      # Volume multiplyer for microphone. Default is set to 1, which equals 100% volume. This number can be
+      # between 0 and 1000.
+      #- MICROPHONE_ALSA_VOLUME=1
 
       # FFMPEG Filter which utilises the "arnndn" filtering method, on publicly trained models.
       # This is a recommended option if your hardware can run it, most computers will run it
@@ -37,15 +42,20 @@ services:
       #
       # This option will attempt to filter out background sound such as static, fans, chairs moving,
       # doors opening and closing, etc.
-      - FFMPEG_FILTER=true
+      #- MICROPHONE_FILTER=true
+
+      # Microphone debug mode, this will write all detected audio to `debug/recordings` directory. Useful
+      # for tweaking microphone settings.
+      #- MICROPHONE_DEBUG=false
 
       # Speaker output interface, this determines the speaker output hardware device. Omitted will select
       # the defaul device. See "device" in the following page...
       #
       # https://github.com/TooTallNate/node-speaker?tab=readme-ov-file#new-speaker-options----speaker-instance
-      - SPEAKER_INTERFACE=hw:0,0
+      #- SPEAKER_INTERFACE=hw:0,0
 
       # Speaker output interface channels count, determines how many output channels there are.
-      - SPEAKER_CHANNELS=1
+      #- SPEAKER_CHANNELS=2
     volumes:
+      # Audio devices.
       - /dev/snd:/dev/snd
