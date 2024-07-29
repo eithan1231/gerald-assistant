@@ -1,4 +1,4 @@
-import { ChildProcess, spawn } from "node:child_process";
+import { ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 import path from "node:path";
 
 const audioSampleRate = 16000;
@@ -6,6 +6,16 @@ const audioBitSize = 16;
 const audioFormat = "s16le"; // "PCM signed 16-bit little-endian"
 
 const audioByteSize = audioBitSize / 8;
+
+// Editable. The size of the audio chunk.
+const audioTargetChunkSize = (audioSampleRate * audioByteSize) / 20;
+
+// Editable. The percentage of an audio chunk that needs to have voice
+// detected for it to be marked as having speech.
+const audioChunkDetectionPercentage = 0.2;
+
+const audioDataPerSecond =
+  audioSampleRate / (audioTargetChunkSize / audioByteSize);
 
 export type MicrophoneOptions = {
   /**
@@ -40,17 +50,15 @@ export type MicrophoneOptions = {
 export class Microphone {
   private options: MicrophoneOptions;
 
-  private ffmpeg?: ChildProcess;
+  private processSox?: ChildProcessWithoutNullStreams;
+  private processFfmpeg?: ChildProcessWithoutNullStreams;
+  private processLogs: string[] = [];
 
   private paused = false;
 
   private audioBufferTotalLength = 0;
   private audioBufferLastDetectedIncrement = 0;
   private audioBuffer: Buffer[] = [];
-
-  private sampleDataPerSecond = 0;
-
-  private ffmpegLogs: string[] = [];
 
   constructor(options: MicrophoneOptions) {
     this.options = options;
@@ -63,77 +71,63 @@ export class Microphone {
   public start() {
     console.log("[Microphone/start] Starting microphone.");
 
+    if (this.processFfmpeg || this.processSox) {
+      throw new Error("Already running process");
+    }
+
     this.paused = false;
 
-    const args: string[] = [];
-    args.push(
-      `-f alsa -channels ${this.options.ffmpegAlsaChannels} -i ${this.options.ffmpegAlsaInterface}`
-    );
+    this.processSox = this.spawnSox();
+    this.processFfmpeg = this.spawnFfmpeg();
 
-    if (this.options.ffmpegFilterVolume !== undefined) {
-      args.push(
-        `-filter:a "volume=${this.options.ffmpegFilterVolume}:precision=double"`
-      );
-    }
+    this.processSox.stdout.pipe(this.processFfmpeg.stdin);
 
-    // Audio-Channel
-    args.push("-ac 1");
+    const buffering: Buffer[] = [];
 
-    if (this.options.ffmpegFilterEnabled) {
-      console.log("[Microphone/start] Filtering enabled");
+    this.processFfmpeg.stdout.on("data", (chunk: Buffer) => {
+      buffering.push(chunk);
 
-      const modelFilename = path.join(
-        process.cwd(),
-        "./config/rnnoise-models/somnolent-hogwash/sh.rnnn"
-      );
+      let bufferedData = Buffer.concat(buffering);
 
-      args.push(`-af \"arnndn=m='${modelFilename}'\"`);
-    }
+      while (bufferedData.length >= audioTargetChunkSize) {
+        const chunk = Buffer.from(
+          bufferedData.buffer,
+          bufferedData.byteOffset,
+          audioTargetChunkSize
+        );
 
-    // Sample rate
-    args.push(`-ar ${audioSampleRate}`);
+        this.onAudioChunk(chunk);
 
-    // Log level
-    args.push(`-v error`);
-
-    // Stream to stdout
-    args.push(`-f ${audioFormat} -`);
-
-    console.log(
-      `[Microphone/start] ffmpeg command "ffmpeg ${JSON.stringify(
-        args.join(" ")
-      )}"`
-    );
-
-    this.ffmpeg = spawn("ffmpeg", args, { shell: true });
-
-    this.ffmpeg.stdout?.on("data", (chunk: Buffer) => {
-      // Resample audio chunk sizes every so often, it shouldn't change, but best to be safe.
-      if (
-        this.audioBufferLastDetectedIncrement === 1 ||
-        this.sampleDataPerSecond === 0
-      ) {
-        const sampleDataPerSecond =
-          audioSampleRate / (chunk.length / audioByteSize);
-
-        if (this.sampleDataPerSecond !== sampleDataPerSecond) {
-          console.log(
-            `[Microphone/ffmpeg -> data] Sample data per second value updated from ${this.sampleDataPerSecond} to ${sampleDataPerSecond}`
-          );
-
-          this.sampleDataPerSecond = sampleDataPerSecond;
-        }
+        bufferedData = Buffer.from(
+          bufferedData.buffer,
+          bufferedData.byteOffset + audioTargetChunkSize,
+          bufferedData.length - audioTargetChunkSize
+        );
       }
 
-      this.onFfmpegAudio(chunk);
+      buffering.length = 0;
+
+      if (bufferedData.length > 0) {
+        buffering.push(bufferedData);
+      }
     });
 
-    this.ffmpeg.stderr?.on("data", (chunk: Buffer) => this.onFfmpegLog(chunk));
+    this.processSox.stderr.on("data", (chunk: Buffer) =>
+      this.onProcessLog(chunk)
+    );
+
+    this.processFfmpeg.stderr.on("data", (chunk: Buffer) =>
+      this.onProcessLog(chunk)
+    );
   }
 
   public stop() {
-    this.ffmpeg?.kill("SIGTERM");
+    this.processSox?.kill("SIGTERM");
+    this.processFfmpeg?.kill("SIGTERM");
     this.audioBufferClear();
+
+    this.processSox = undefined;
+    this.processFfmpeg = undefined;
   }
 
   public pause() {
@@ -145,6 +139,73 @@ export class Microphone {
     this.audioBufferClear();
   }
 
+  private spawnSox = () => {
+    console.log("[Microphone/spawnSox] Starting");
+
+    const args: string[] = [];
+
+    args.push(`-t alsa ${this.options.ffmpegAlsaInterface}`);
+
+    const channels = 1;
+
+    args.push(
+      `-t raw -b ${audioBitSize} -c ${channels} -r ${audioSampleRate} -e signed - vol ${
+        this.options.ffmpegFilterVolume ?? 1
+      }`
+    );
+
+    console.log("[Microphone/spawnSox] args", args.join(" "));
+
+    return spawn("sox", args.join(" ").split(" "), {
+      stdio: "pipe",
+    });
+  };
+
+  private spawnFfmpeg = () => {
+    console.log("[Microphone/spawnFfmpeg] Starting");
+
+    const args = [];
+
+    // Input format
+    args.push(`-f ${audioFormat}`);
+
+    // Input sample-rate
+    args.push(`-ar ${audioSampleRate}`);
+
+    // Input audio-channels
+    args.push(`-ac 1`);
+
+    // Input audio filtering (background sounds)
+    if (this.options.ffmpegFilterEnabled) {
+      console.log("[Microphone/start] Filtering enabled");
+
+      const modelFilename = path.join(
+        process.cwd(),
+        "./config/rnnoise-models/somnolent-hogwash/sh.rnnn"
+      );
+
+      args.push(`-af \"arnndn=m='${modelFilename}'\"`);
+    }
+
+    // Input from STDIN
+    args.push(`-i -`);
+
+    // Output format
+    args.push(`-f ${audioFormat}`);
+
+    // Output to STDOUT
+    args.push("-");
+
+    // General logging mode
+    args.push("-v error");
+
+    console.log("[Microphone/spawnFfmpeg] args", args.join(" "));
+
+    return spawn("ffmpeg", args.join(" ").split(" "), {
+      stdio: "pipe",
+    });
+  };
+
   private audioBufferFlush = () => {
     this.onData(Buffer.concat(this.audioBuffer));
     this.audioBufferClear();
@@ -155,7 +216,7 @@ export class Microphone {
     this.audioBufferTotalLength = 0;
   };
 
-  private onFfmpegAudio = (chunk: Buffer) => {
+  private onAudioChunk = (chunk: Buffer) => {
     if (this.paused) {
       return;
     }
@@ -163,7 +224,7 @@ export class Microphone {
     this.audioBufferLastDetectedIncrement++;
 
     const flushAt = Math.round(
-      this.sampleDataPerSecond * this.options.inactivityFlush
+      audioDataPerSecond * this.options.inactivityFlush
     );
 
     let soundParts = 0;
@@ -175,8 +236,10 @@ export class Microphone {
       }
     }
 
-    // If more than an 8th of this sample has sound.
-    if (soundParts > chunk.length / audioByteSize / 8) {
+    if (
+      soundParts >
+      (chunk.length / audioByteSize) * audioChunkDetectionPercentage
+    ) {
       this.audioBufferLastDetectedIncrement = 0;
     }
 
@@ -200,14 +263,21 @@ export class Microphone {
     }
   };
 
-  private onFfmpegLog = (chunk: Buffer) => {
-    if (this.ffmpegLogs.length > 256) {
-      this.ffmpegLogs.splice(0, 1);
+  private onProcessLog = (chunk: Buffer) => {
+    if (this.processLogs.length > 256) {
+      this.processLogs.splice(0, 1);
     }
 
-    this.ffmpegLogs.push(chunk.toString());
+    const chunkAsString = chunk.toString();
 
-    console.log("[Microphone/onFfmpegLog] Error ocurred! See below");
-    console.error(chunk.toString());
+    if (chunkAsString.startsWith("\rIn:") || chunkAsString.startsWith("In:")) {
+      // SOX progress report
+      return;
+    }
+
+    this.processLogs.push(chunkAsString);
+
+    console.log("[Microphone/onProcessLog] Output log");
+    console.log(chunkAsString);
   };
 }
