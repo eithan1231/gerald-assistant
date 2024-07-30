@@ -17,8 +17,8 @@ export type ClientOptions = {
   microphoneAlsaVolume: number;
   microphoneFilter: boolean;
 
-  speakerInterface: string;
-  speakerChannels: number;
+  speakerInterface?: string;
+  speakerChannels?: number;
 };
 
 export class Client {
