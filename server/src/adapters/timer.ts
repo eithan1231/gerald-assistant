@@ -75,7 +75,7 @@ export class AdapterTimer {
       success: true,
       results: [
         {
-          type: "client-sound",
+          type: "client-sound-wave",
           data: content,
         },
       ],

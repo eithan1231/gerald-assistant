@@ -174,10 +174,10 @@ export class Client {
     }
   };
 
-  private handleSocketDataAudio = async (buffer: Buffer) => {
+  private handleSocketDataAudioWave = async (buffer: Buffer) => {
     console.log("[handleSocketDataAudio] playing socket data audio");
 
-    this.speaker.queue(buffer);
+    this.speaker.queueWave(buffer);
   };
 
   // =============================================
@@ -206,8 +206,8 @@ export class Client {
       return;
     }
 
-    if (actionCharacter === "A") {
-      await this.handleSocketDataAudio(payload);
+    if (actionCharacter === "W") {
+      await this.handleSocketDataAudioWave(payload);
       return;
     }
 

@@ -40,7 +40,7 @@ export type AdapterActionResultItemTTS = {
 };
 
 export type AdapterActionResultItemSound = {
-  type: "client-sound";
+  type: "client-sound-wave";
   data: Buffer;
 };
 

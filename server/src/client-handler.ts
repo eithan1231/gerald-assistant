@@ -149,8 +149,8 @@ export class ClientHandler {
     this.clientSocket.send(payload);
   };
 
-  public sendAudio = async (data: Buffer) => {
-    const payload = Buffer.concat([Buffer.from("A"), data]);
+  public sendAudioWave = async (data: Buffer) => {
+    const payload = Buffer.concat([Buffer.from("W"), data]);
 
     this.clientSocket.send(payload);
   };
@@ -166,7 +166,7 @@ export class ClientHandler {
       return;
     }
 
-    await this.sendAudio(Buffer.concat(responseTts.data));
+    await this.sendAudioWave(responseTts.data);
   };
 
   // =============================================
@@ -391,8 +391,8 @@ export class ClientHandler {
       await this.sendTts(result.message);
     }
 
-    if (result.type === "client-sound") {
-      await this.sendAudio(result.data);
+    if (result.type === "client-sound-wave") {
+      await this.sendAudioWave(result.data);
     }
 
     if (result.type === "interpreter-evaluate") {
