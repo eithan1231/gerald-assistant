@@ -1,10 +1,11 @@
 import { WebSocket } from "ws";
 import { timeout } from "./util.js";
-import { Speaker } from "./speaker.js";
+// import { SpeakerOld } from "./speaker-old.js";
 import { Microphone } from "./microphone.js";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { getConfigOption } from "./config.js";
+import { Speaker } from "./speaker.js";
 
 export type ClientOptions = {
   endpoint: string;
