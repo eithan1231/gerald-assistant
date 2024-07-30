@@ -1,4 +1,3 @@
-import SpeakerLib from "speaker-arm64";
 import { timeout } from "./util.js";
 import { unlink, writeFile } from "fs/promises";
 import { spawn } from "child_process";
