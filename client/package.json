@@ -13,7 +13,6 @@
   "author": "Eithan Hersey-Tuit",
   "license": "ISC",
   "dependencies": {
-    "speaker-arm64": "^0.5.2",
     "typescript": "^5.4.5",
     "ws": "^8.18.0",
     "zod": "^3.23.8"

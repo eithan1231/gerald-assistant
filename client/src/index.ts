@@ -6,8 +6,8 @@ const main = async () => {
     name: getConfigOption("CLIENT_NAME"),
     endpoint: getConfigOption("ENDPOINT"),
 
-    speakerInterface: getConfigOption("SPEAKER_INTERFACE"),
-    speakerChannels: getConfigOption("SPEAKER_CHANNELS"),
+    speakerInterface: getConfigOption("SPEAKER_INTERFACE") ?? undefined,
+    speakerChannels: getConfigOption("SPEAKER_CHANNELS") ?? undefined,
 
     microphoneInactivityFlush: getConfigOption("MICROPHONE_INACTIVITY_FLUSH"),
     microphoneAlsaInterface: getConfigOption("MICROPHONE_ALSA_INTERFACE"),

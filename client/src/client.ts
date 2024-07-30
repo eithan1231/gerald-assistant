@@ -1,10 +1,11 @@
 import { WebSocket } from "ws";
 import { timeout } from "./util.js";
-import { Speaker } from "./speaker.js";
+// import { SpeakerOld } from "./speaker-old.js";
 import { Microphone } from "./microphone.js";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { getConfigOption } from "./config.js";
+import { Speaker } from "./speaker.js";
 
 export type ClientOptions = {
   endpoint: string;
@@ -16,8 +17,8 @@ export type ClientOptions = {
   microphoneAlsaVolume: number;
   microphoneFilter: boolean;
 
-  speakerInterface: string;
-  speakerChannels: number;
+  speakerInterface?: string;
+  speakerChannels?: number;
 };
 
 export class Client {
@@ -174,10 +175,10 @@ export class Client {
     }
   };
 
-  private handleSocketDataAudio = async (buffer: Buffer) => {
+  private handleSocketDataAudioWave = async (buffer: Buffer) => {
     console.log("[handleSocketDataAudio] playing socket data audio");
 
-    this.speaker.queue(buffer);
+    this.speaker.queueWave(buffer);
   };
 
   // =============================================
@@ -206,8 +207,8 @@ export class Client {
       return;
     }
 
-    if (actionCharacter === "A") {
-      await this.handleSocketDataAudio(payload);
+    if (actionCharacter === "W") {
+      await this.handleSocketDataAudioWave(payload);
       return;
     }
 

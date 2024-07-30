@@ -2,7 +2,7 @@ import { ConfigurationOptions, getConfigOption } from "./config/env.js";
 
 export type CreateTextToSpeechResponseSuccess = {
   success: true;
-  data: Buffer[];
+  data: Buffer;
 };
 
 export type CreateTextToSpeechResponseError = {
@@ -57,6 +57,6 @@ export const createTextToSpeech = async (
 
   return {
     success: true,
-    data: responseContent,
+    data: Buffer.concat(responseContent),
   };
 };
