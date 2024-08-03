@@ -8,6 +8,7 @@ import {
   getConfigOptionList,
 } from "./config/env.js";
 import { Adapter, AdapterActionResultItem } from "./adapter.js";
+import { transcodePcmToWav } from "./wav-transformer.js";
 
 type ClientIdentification = {
   name: string;
@@ -20,15 +21,11 @@ export class ClientHandler {
   private conversationKeepAliveTtl = 30;
   private conversationLastSeen = 0;
 
-  private internalTranscribeSocket: WebSocket | null = null;
   private internalInterpreter?: Interpreter;
 
   private identification?: ClientIdentification;
 
   private interval: NodeJS.Timeout | null = null;
-
-  private recentTranscriptionResults: Array<{ time: number; value: string }> =
-    [];
 
   constructor(clientSocket: WebSocket, adapter: Adapter) {
     this.clientSocket = clientSocket;
@@ -45,51 +42,45 @@ export class ClientHandler {
     this.clientSocket.once("close", () => this.onClientSocketClose());
   }
 
-  private getTranscribeSocket = async () => {
-    if (
-      this.internalTranscribeSocket &&
-      this.internalTranscribeSocket.readyState === WebSocket.OPEN
-    ) {
-      return this.internalTranscribeSocket;
-    }
+  private getTranscribedAudio = async (buffer: Buffer): Promise<string> => {
+    const start = performance.now();
 
-    if (
-      this.internalTranscribeSocket &&
-      this.internalTranscribeSocket.readyState === WebSocket.CONNECTING
-    ) {
-      for (let i = 0; i < 10; i++) {
-        //@ts-expect-error
-        if (this.internalTranscribeSocket.readyState === WebSocket.OPEN) {
-          return this.internalTranscribeSocket;
-        }
-
-        await timeout(20);
-      }
-    }
-
-    this.internalTranscribeSocket = new WebSocket(
-      getConfigOption(ConfigurationOptions.EndpointTranscribe)
+    const result = transcodePcmToWav(
+      {
+        channels: 1,
+        depth: 16,
+        rate: 16000,
+      },
+      buffer
     );
 
-    this.internalTranscribeSocket.on("message", (data) => {
-      if (data instanceof Buffer) {
-        this.onTranscribeSocketData(data);
-      }
-    });
+    const blob = new Blob([result], { type: "audio/wav" });
 
-    this.internalTranscribeSocket.once("error", (err) =>
-      this.onTranscribeSocketError(err)
+    const form = new FormData();
+    form.append("file", blob, "audio.wav");
+    form.append("model", getConfigOption(ConfigurationOptions.WhisperModel));
+
+    const perfPayload = performance.now() - start;
+
+    const response = await fetch(
+      getConfigOption(ConfigurationOptions.EndpointTranscribe),
+      {
+        method: "POST",
+        body: form,
+      }
     );
 
-    for (let i = 0; i < 10; i++) {
-      if (this.internalTranscribeSocket.readyState === WebSocket.OPEN) {
-        return this.internalTranscribeSocket;
-      }
+    const responseData = await response.json();
 
-      await timeout(20);
-    }
+    const perfResponse = performance.now() - start;
 
-    return null;
+    console.log(
+      `[ClientHandler/getTranscribedAudio] Response in ${perfResponse.toFixed(
+        2
+      )}ms, created payload in ${perfPayload.toFixed(2)}ms`
+    );
+
+    return responseData.text;
   };
 
   private cleanupInterpreter = async () => {
@@ -233,10 +224,28 @@ export class ClientHandler {
       return;
     }
 
-    const tsSocket = await this.getTranscribeSocket();
+    const text = await this.getTranscribedAudio(buffer);
 
-    if (tsSocket) {
-      tsSocket.send(buffer);
+    if (
+      this.conversationLastSeen + this.conversationKeepAliveTtl >=
+      unixTimestamp()
+    ) {
+      this.conversationLastSeen = unixTimestamp();
+
+      await this.handleTranscribedText(text);
+
+      return;
+    }
+
+    const textLowered = text.toLowerCase();
+
+    const words = getConfigOptionList(ConfigurationOptions.ListenWords);
+    if (words.some((word) => textLowered.indexOf(word) >= 0)) {
+      this.conversationLastSeen = unixTimestamp();
+
+      await this.handleTranscribedText(text);
+
+      return;
     }
   };
 
@@ -315,57 +324,6 @@ export class ClientHandler {
     if (this.identification) {
       this.adapter.unsubscribe(this.identification.name);
     }
-  };
-
-  private onTranscribeSocketData = async (data: Buffer) => {
-    const payload = JSON.parse(data.toString("utf8"));
-
-    const text = payload.text.trim().toLowerCase();
-
-    if (!text) {
-      return;
-    }
-
-    if (
-      this.recentTranscriptionResults.find(
-        (item) => item.time + 5 > unixTimestamp() && item.value === text
-      )
-    ) {
-      return;
-    }
-
-    this.recentTranscriptionResults.push({
-      time: unixTimestamp(),
-      value: text,
-    });
-
-    if (this.recentTranscriptionResults.length >= 4) {
-      this.recentTranscriptionResults.splice(0, 1);
-    }
-
-    if (
-      this.conversationLastSeen + this.conversationKeepAliveTtl >=
-      unixTimestamp()
-    ) {
-      this.conversationLastSeen = unixTimestamp();
-
-      await this.handleTranscribedText(text);
-
-      return;
-    }
-
-    const words = getConfigOptionList(ConfigurationOptions.ListenWords);
-    if (words.some((word) => text.indexOf(word) >= 0)) {
-      this.conversationLastSeen = unixTimestamp();
-
-      await this.handleTranscribedText(text);
-
-      return;
-    }
-  };
-
-  private onTranscribeSocketError = async (err: Error) => {
-    console.error(err);
   };
 
   private onAdapterEvent = async (result: AdapterActionResultItem) => {

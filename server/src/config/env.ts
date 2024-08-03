@@ -2,6 +2,7 @@ export enum ConfigurationOptions {
   EndpointPrometheus = "ENDPOINT_PROMETHEUS",
   EndpointTts = "ENDPOINT_TTS",
   EndpointTranscribe = "ENDPOINT_TRANSCRIBE",
+  WhisperModel = "WHISPER_MODEL",
   ListenWords = "LISTEN_WORDS",
   OpenAiKey = "OPENAI_KEY",
 }
@@ -11,6 +12,7 @@ const optionalConfigurationOptionsDetails: Record<string, string> = {
   [ConfigurationOptions.EndpointTranscribe]:
     "http://127.0.0.1:3500/v1/audio/transcriptions",
   [ConfigurationOptions.ListenWords]: "jeff,jeffery,gerald",
+  [ConfigurationOptions.WhisperModel]: "Systran/faster-whisper-base.en",
 };
 
 /**

@@ -9,10 +9,6 @@ services:
     restart: always
     volumes:
       - ./cache/faster-whisper/huggingface:/root/.cache/huggingface
-    environment:
-      # - WHISPER_MODEL=Systran/faster-distil-whisper-small.en
-      # - WHISPER_MODEL=Systran/faster-whisper-tiny.en
-      - WHISPER_MODEL=Systran/faster-whisper-base.en
     ports:
       - 3500:8000
   mimic3:

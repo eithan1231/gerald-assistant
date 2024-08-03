@@ -22,20 +22,6 @@ services:
       # faster-whisper-server, used for speach-to-text.
       - ENDPOINT_TRANSCRIBE=http://faster-whisper-server:8000/v1/audio/transcriptions
 
-    volumes:
-      - /dev/snd:/dev/snd
-
-  faster-whisper-server:
-    container_name: faster-whisper-server
-    # To run model on GPU, utilise the tag "latest-cuda", for cpu use "latest-cpu".
-    # Most models will run sufficiently on CPU.
-    image: fedirz/faster-whisper-server:latest-cpu
-    restart: always
-    volumes:
-      # Mounting this volume will vastly improve startup times, and will avoid
-      # the model being re-downloaded
-      - ./cache/faster-whisper/huggingface:/root/.cache/huggingface
-    environment:
       # faster-whisper models for speach-to-text. I have found the base-en model to be a great
       # compromise between speed and performance. Hallucinations for "okay okay okay", or "please
       # subscribe to xyz" are not entirely uncommon, but rare enough to not be impactful.
@@ -48,6 +34,20 @@ services:
       # More can be found here:
       # https://huggingface.co/Systran
       - WHISPER_MODEL=Systran/faster-whisper-base.en
+
+    volumes:
+      - /dev/snd:/dev/snd
+
+  faster-whisper-server:
+    container_name: faster-whisper-server
+    # To run model on GPU, utilise the tag "latest-cuda", for cpu use "latest-cpu".
+    # Most models will run sufficiently on CPU.
+    image: fedirz/faster-whisper-server:latest-cuda
+    restart: always
+    volumes:
+      # Mounting this volume will vastly improve startup times, and will avoid
+      # the model being re-downloaded
+      - ./cache/faster-whisper/huggingface:/root/.cache/huggingface
 
   mimic3:
     container_name: mimic3
