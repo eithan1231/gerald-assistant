@@ -6,6 +6,7 @@ import {
   ConfigurationOptions,
   getConfigOption,
   getConfigOptionList,
+  getConfigOptionNumber,
 } from "./config/env.js";
 import { Adapter, AdapterActionResultItem } from "./adapter.js";
 import { transcodePcmToWav } from "./wav-transformer.js";
@@ -18,7 +19,9 @@ export class ClientHandler {
   private clientSocket: WebSocket;
   private adapter: Adapter;
 
-  private conversationKeepAliveTtl = 30;
+  private conversationKeepAliveTtl = getConfigOptionNumber(
+    ConfigurationOptions.ConversationKeepAlive
+  );
   private conversationLastSeen = 0;
 
   private internalInterpreter?: Interpreter;
