@@ -16,6 +16,18 @@ export const ConfigurationOptionsSchema = z.object({
 
   SPEAKER_INTERFACE: z.string().nullable().default(null),
   SPEAKER_CHANNELS: z.coerce.number().min(1).max(32).nullable().default(null),
+  SPEAKER_TRANSCODE_RATE: z.coerce
+    .number()
+    .min(8000)
+    .max(60000)
+    .nullable()
+    .default(null),
+  SPEAKER_TRANSCODE_BIT: z.coerce
+    .number()
+    .min(1)
+    .max(64)
+    .nullable()
+    .default(null),
 
   MICROPHONE_INACTIVITY_FLUSH: z.coerce.number().min(0.2).max(10).default(2.2),
   MICROPHONE_DEBUG: zodBooleanCoercer(false),

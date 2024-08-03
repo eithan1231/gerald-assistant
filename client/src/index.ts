@@ -8,6 +8,9 @@ const main = async () => {
 
     speakerInterface: getConfigOption("SPEAKER_INTERFACE") ?? undefined,
     speakerChannels: getConfigOption("SPEAKER_CHANNELS") ?? undefined,
+    speakerTranscodeRate:
+      getConfigOption("SPEAKER_TRANSCODE_RATE") ?? undefined,
+    speakerTranscodeBit: getConfigOption("SPEAKER_TRANSCODE_BIT") ?? undefined,
 
     microphoneInactivityFlush: getConfigOption("MICROPHONE_INACTIVITY_FLUSH"),
     microphoneAlsaInterface: getConfigOption("MICROPHONE_ALSA_INTERFACE"),

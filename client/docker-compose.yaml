@@ -56,6 +56,12 @@ services:
 
       # Speaker output interface channels count, determines how many output channels there are.
       #- SPEAKER_CHANNELS=2
+
+      # TRANSCODING OPTION. Sample rate of speaker.
+      #- SPEAKER_TRANSCODE_RATE=48000
+
+      # TRANSCODING OPTION. Bit size of speaker.
+      #- SPEAKER_TRANSCODE_BIT=16
     volumes:
       # Audio devices.
       - /dev/snd:/dev/snd

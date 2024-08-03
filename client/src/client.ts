@@ -1,8 +1,7 @@
 import { WebSocket } from "ws";
 import { timeout } from "./util.js";
-// import { SpeakerOld } from "./speaker-old.js";
 import { Microphone } from "./microphone.js";
-import { mkdir, writeFile } from "node:fs/promises";
+import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import { getConfigOption } from "./config.js";
 import { Speaker } from "./speaker.js";
@@ -19,6 +18,8 @@ export type ClientOptions = {
 
   speakerInterface?: string;
   speakerChannels?: number;
+  speakerTranscodeRate?: number;
+  speakerTranscodeBit?: number;
 };
 
 export class Client {
@@ -39,6 +40,8 @@ export class Client {
     this.speaker = new Speaker({
       device: this.options.speakerInterface,
       channels: this.options.speakerChannels,
+      transcodeBit: this.options.speakerTranscodeBit,
+      transcodeRate: this.options.speakerTranscodeRate,
     });
 
     this.microphone = new Microphone({
@@ -158,7 +161,6 @@ export class Client {
 
   private handleSocketDataJson = async (buffer: Buffer) => {
     const payload = JSON.parse(buffer.toString());
-    console.log(payload);
 
     if (!payload.type) {
       console.log(`[handleSocketDataJson] Received malformed payload, no type`);
