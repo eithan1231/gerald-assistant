@@ -151,7 +151,7 @@ export class Interpreter {
       });
 
     const result = await this.openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+      model: getConfigOption(ConfigurationOptions.OpenAiModel),
       tools: tools.length > 0 ? tools : undefined,
       messages: this.messages,
     });

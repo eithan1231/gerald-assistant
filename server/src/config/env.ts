@@ -5,6 +5,7 @@ export enum ConfigurationOptions {
   WhisperModel = "WHISPER_MODEL",
   ListenWords = "LISTEN_WORDS",
   OpenAiKey = "OPENAI_KEY",
+  OpenAiModel = "OPENAI_MODEL",
   ConversationKeepAlive = "CONVERSATION_KEEP_ALIVE",
 }
 
@@ -14,6 +15,7 @@ const optionalConfigurationOptionsDetails: Record<string, string> = {
     "http://127.0.0.1:3500/v1/audio/transcriptions",
   [ConfigurationOptions.ListenWords]: "jeff,jeffery,gerald",
   [ConfigurationOptions.WhisperModel]: "Systran/faster-whisper-base.en",
+  [ConfigurationOptions.OpenAiModel]: "gpt-3.5-turbo",
   [ConfigurationOptions.ConversationKeepAlive]: "15",
 };
 
