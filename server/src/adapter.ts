@@ -34,6 +34,10 @@ export type AdapterActionResultItemInterpreterEvaluate = {
   type: "interpreter-evaluate";
 };
 
+export type AdapterActionResultItemInterpreterEnd = {
+  type: "interpreter-end";
+};
+
 export type AdapterActionResultItemTTS = {
   type: "client-tts";
   message: string;
@@ -50,6 +54,7 @@ export type AdapterActionResultItem =
   | AdapterActionResultItemInterpreterAssistantMessage
   | AdapterActionResultItemInterpreterToolMessage
   | AdapterActionResultItemInterpreterEvaluate
+  | AdapterActionResultItemInterpreterEnd
   | AdapterActionResultItemTTS
   | AdapterActionResultItemSound;
 

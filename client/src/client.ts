@@ -175,6 +175,18 @@ export class Client {
 
       return;
     }
+
+    if (payload.type === "conversation-end") {
+      console.log("[handleSocketDataJson] Conversation ended");
+
+      return;
+    }
+
+    if (payload.type === "conversation-start") {
+      console.log("[handleSocketDataJson] Conversation started");
+
+      return;
+    }
   };
 
   private handleSocketDataAudioWave = async (buffer: Buffer) => {

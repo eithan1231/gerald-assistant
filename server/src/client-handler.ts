@@ -1,15 +1,14 @@
 import { WebSocket } from "ws";
 import { timeout, unixTimestamp } from "./util.js";
 import { Interpreter } from "./interpreter.js";
-import { createTextToSpeech } from "./text-to-speech.js";
+import { createTextToSpeech } from "./audio/text-to-speech.js";
 import {
   ConfigurationOptions,
-  getConfigOption,
   getConfigOptionList,
   getConfigOptionNumber,
 } from "./config/env.js";
 import { Adapter, AdapterActionResultItem } from "./adapter.js";
-import { transcodePcmToWav } from "./wav-transformer.js";
+import { speechToText } from "./audio/speech-to-text.js";
 
 type ClientIdentification = {
   name: string;
@@ -45,81 +44,50 @@ export class ClientHandler {
     this.clientSocket.once("close", () => this.onClientSocketClose());
   }
 
-  private getTranscribedAudio = async (buffer: Buffer): Promise<string> => {
-    const start = performance.now();
-
-    const result = transcodePcmToWav(
-      {
-        channels: 1,
-        depth: 16,
-        rate: 16000,
-      },
-      buffer
-    );
-
-    const blob = new Blob([result], { type: "audio/wav" });
-
-    const form = new FormData();
-    form.append("file", blob, "audio.wav");
-    form.append("model", getConfigOption(ConfigurationOptions.WhisperModel));
-
-    const perfPayload = performance.now() - start;
-
-    const response = await fetch(
-      getConfigOption(ConfigurationOptions.EndpointTranscribe),
-      {
-        method: "POST",
-        body: form,
-      }
-    );
-
-    const responseData = await response.json();
-
-    const perfResponse = performance.now() - start;
-
-    console.log(
-      `[ClientHandler/getTranscribedAudio] Response in ${perfResponse.toFixed(
-        2
-      )}ms, created payload in ${perfPayload.toFixed(2)}ms`
-    );
-
-    return responseData.text;
-  };
-
   private cleanupInterpreter = async () => {
     if (!this.internalInterpreter) {
       return;
     }
 
-    if (
-      this.conversationLastSeen + this.conversationKeepAliveTtl >=
-      unixTimestamp()
-    ) {
-      return;
-    }
+    const interpreterEnded = this.internalInterpreter.getEndedTime() !== 0;
 
-    if (this.internalInterpreter.getEndedTime() === 0) {
+    const conversationActive =
+      this.conversationLastSeen + this.conversationKeepAliveTtl >=
+      unixTimestamp();
+
+    if (!interpreterEnded && conversationActive) {
       return;
     }
 
     console.log(
-      `[onIntervalInterpreterValidation] Conversation has exceeded threshold, ending`
+      "[ClientHandler/cleanupInterpreter] Interpreter conversation ended"
     );
 
-    let interpreter = this.internalInterpreter;
+    await this.sendJson({ type: "conversation-end" });
+
+    const interpreter = this.internalInterpreter;
 
     this.internalInterpreter = undefined;
 
-    await interpreter.end();
+    if (!interpreterEnded) {
+      await interpreter.end();
+    }
   };
 
   private getInterpreter = async () => {
     await this.cleanupInterpreter();
 
     if (!this.internalInterpreter) {
+      console.log("[ClientHandler/getInterpreter] Created new interpreter");
+
+      await this.sendJson({
+        type: "conversation-start",
+      });
+
       this.internalInterpreter = new Interpreter();
 
       const actions = await this.adapter.getActions();
+
       for (const action of actions) {
         this.internalInterpreter.addAction(action);
       }
@@ -175,6 +143,7 @@ export class ClientHandler {
       console.log(
         `[handleClientSocketDataJson] Received malformed payload, no name with identify payload`
       );
+
       return;
     }
 
@@ -227,7 +196,7 @@ export class ClientHandler {
       return;
     }
 
-    const text = await this.getTranscribedAudio(buffer);
+    const text = await speechToText(buffer);
 
     if (
       this.conversationLastSeen + this.conversationKeepAliveTtl >=
@@ -316,7 +285,7 @@ export class ClientHandler {
   };
 
   private onClientSocketOpen = () => {
-    this.interval = setInterval(() => this.onInterval(), 5000);
+    this.interval = setInterval(() => this.onInterval(), 1000);
   };
 
   private onClientSocketClose = () => {
@@ -335,6 +304,10 @@ export class ClientHandler {
     }
 
     const interpreter = await this.getInterpreter();
+
+    if (result.type === "interpreter-end") {
+      await interpreter.end();
+    }
 
     if (result.type === "interpreter-assistant-message") {
       await interpreter.addAssistantMessage(result.message);

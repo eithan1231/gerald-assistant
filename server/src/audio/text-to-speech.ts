@@ -1,4 +1,4 @@
-import { ConfigurationOptions, getConfigOption } from "./config/env.js";
+import { ConfigurationOptions, getConfigOption } from "../config/env.js";
 
 export type CreateTextToSpeechResponseSuccess = {
   success: true;
